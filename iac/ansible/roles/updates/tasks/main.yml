@@ -1,0 +1,57 @@
+---
+- name: Refresh apt package index
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 0
+  register: apt_update_result
+  retries: 2
+  delay: 3
+  until: apt_update_result is succeeded
+  when: ansible_facts.os_family == "Debian"
+
+- name: Upgrade all installed packages
+  ansible.builtin.apt:
+    upgrade: full
+  register: apt_upgrade_result
+  when: ansible_facts.os_family == "Debian"
+
+- name: Remove packages that are no longer needed
+  ansible.builtin.apt:
+    autoremove: true
+  register: apt_autoremove_result
+  when: ansible_facts.os_family == "Debian"
+
+- name: Clean up cached package files
+  ansible.builtin.apt:
+    autoclean: true
+  register: apt_autoclean_result
+  when: ansible_facts.os_family == "Debian"
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+
+- name: List packages that triggered the reboot requirement
+  ansible.builtin.command: cat /var/run/reboot-required.pkgs
+  register: reboot_required_pkgs
+  changed_when: false
+  failed_when: false
+  when: reboot_required_file.stat.exists
+
+- name: Report maintenance summary
+  ansible.builtin.debug:
+    msg:
+      - "Packages upgraded:   {{ 'yes' if apt_upgrade_result.changed | default(false) else 'no changes' }}"
+      - "Packages removed:    {{ 'yes' if apt_autoremove_result.changed | default(false) else 'no changes' }}"
+      - "Cache cleaned:       {{ 'yes' if apt_autoclean_result.changed | default(false) else 'no changes' }}"
+      - "Reboot required:     {{ 'YES' if reboot_required_file.stat.exists else 'no' }}"
+      - "{{ ('Triggered by: ' + (reboot_required_pkgs.stdout | default('unknown'))) if reboot_required_file.stat.exists else '' }}"
+
+- name: Reboot the host when required and enabled
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ maintenance_reboot_timeout_seconds }}"
+    msg: "Rebooting for maintenance updates triggered by Ansible"
+  when:
+    - reboot_required_file.stat.exists
+    - maintenance_auto_reboot | bool

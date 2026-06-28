@@ -1,0 +1,56 @@
+---
+- name: Build a summary of key host facts
+  ansible.builtin.set_fact:
+    host_summary:
+      hostname: "{{ ansible_facts.hostname }}"
+      fqdn: "{{ ansible_facts.fqdn }}"
+      os: "{{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }} ({{ ansible_facts.distribution_release }})"
+      kernel: "{{ ansible_facts.kernel }}"
+      architecture: "{{ ansible_facts.architecture }}"
+      virtualization_role: "{{ ansible_facts.virtualization_role | default('n/a') }}"
+      virtualization_type: "{{ ansible_facts.virtualization_type | default('n/a') }}"
+      cpu_vendor: "{{ ansible_facts.processor[1] | default('unknown') }}"
+      cpu_model: "{{ ansible_facts.processor[2] | default('unknown') }}"
+      cpu_physical_cores: "{{ ansible_facts.processor_cores }}"
+      cpu_threads_per_core: "{{ ansible_facts.processor_threads_per_core }}"
+      cpu_total_vcpus: "{{ ansible_facts.processor_vcpus }}"
+      memory_total_mb: "{{ ansible_facts.memtotal_mb }}"
+      memory_free_mb: "{{ ansible_facts.memfree_mb }}"
+      swap_total_mb: "{{ ansible_facts.swaptotal_mb }}"
+      swap_free_mb: "{{ ansible_facts.swapfree_mb }}"
+      default_ipv4_address: "{{ ansible_facts.default_ipv4.address | default('n/a') }}"
+      default_ipv4_gateway: "{{ ansible_facts.default_ipv4.gateway | default('n/a') }}"
+      default_ipv4_interface: "{{ ansible_facts.default_ipv4.interface | default('n/a') }}"
+      all_ipv4_addresses: "{{ ansible_facts.all_ipv4_addresses }}"
+      dns_nameservers: "{{ ansible_facts.dns.nameservers | default([]) }}"
+      uptime_seconds: "{{ ansible_facts.uptime_seconds }}"
+
+- name: Display host summary
+  ansible.builtin.debug:
+    msg:
+      - "Hostname:           {{ host_summary.hostname }} ({{ host_summary.fqdn }})"
+      - "OS:                 {{ host_summary.os }}"
+      - "Kernel:             {{ host_summary.kernel }}"
+      - "Architecture:       {{ host_summary.architecture }}"
+      - "Virtualization:     role={{ host_summary.virtualization_role }} type={{ host_summary.virtualization_type }}"
+      - "CPU vendor:         {{ host_summary.cpu_vendor }}"
+      - "CPU model:          {{ host_summary.cpu_model }}"
+      - "CPU cores/threads:  {{ host_summary.cpu_physical_cores }} physical cores, {{ host_summary.cpu_threads_per_core }} threads/core, {{ host_summary.cpu_total_vcpus }} total vCPUs"
+      - "Memory:             {{ host_summary.memory_free_mb }} MB free / {{ host_summary.memory_total_mb }} MB total"
+      - "Swap:               {{ host_summary.swap_free_mb }} MB free / {{ host_summary.swap_total_mb }} MB total"
+      - "Default IPv4:       {{ host_summary.default_ipv4_address }} via {{ host_summary.default_ipv4_interface }} (gateway {{ host_summary.default_ipv4_gateway }})"
+      - "All IPv4 addresses: {{ host_summary.all_ipv4_addresses }}"
+      - "DNS nameservers:    {{ host_summary.dns_nameservers }}"
+      - "Uptime:             {{ (host_summary.uptime_seconds | int / 3600) | round(1) }} hours"
+
+- name: Display disk and mount summary
+  ansible.builtin.debug:
+    msg: >-
+      {{ ansible_facts.mounts | default([]) | map(attribute='mount') | list }} mounted;
+      LVM VGs: {{
+        ansible_facts.lvm.vgs.keys() | list
+        if ansible_facts.lvm is defined
+        and ansible_facts.lvm is mapping
+        and ansible_facts.lvm.vgs is defined
+        else []
+      }}

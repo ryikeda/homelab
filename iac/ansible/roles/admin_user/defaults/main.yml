@@ -1,0 +1,13 @@
+---
+admin_user_name: ansible
+admin_user_password_hash: ""
+admin_user_update_password: on_create
+admin_user_groups:
+  - sudo
+admin_user_shell: /bin/bash
+admin_user_sudo_nopasswd: true
+ssh_key_name: ansible
+ssh_key_dir: "{{ lookup('env', 'HOME') }}/.ssh"
+ssh_key_path: "{{ ssh_key_dir }}/{{ ssh_key_name }}"
+ssh_pubkey_path: "{{ ssh_key_path }}.pub"
+ssh_generate_local_key: true

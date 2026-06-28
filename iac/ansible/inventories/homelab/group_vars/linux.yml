@@ -1,0 +1,5 @@
+---
+linux_common_packages:
+  - ca-certificates
+  - curl
+  - sudo

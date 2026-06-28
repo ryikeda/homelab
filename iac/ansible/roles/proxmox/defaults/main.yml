@@ -1,0 +1,8 @@
+---
+proxmox_required_packages:
+  - sudo
+proxmox_manage_admin_user: false
+proxmox_admin_user_realm: pam
+proxmox_admin_user_comment: "Ansible management user"
+proxmox_admin_user_acl_path: /
+proxmox_admin_user_role: Administrator

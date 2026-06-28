@@ -1,0 +1,121 @@
+---
+- name: Ensure Proxmox host packages are present
+  ansible.builtin.apt:
+    name: "{{ proxmox_required_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts.os_family == "Debian"
+
+- name: Check Proxmox VE version
+  ansible.builtin.command: pveversion
+  register: proxmox_version
+  changed_when: false
+  failed_when: false
+
+- name: Report Proxmox VE version
+  ansible.builtin.debug:
+    msg: "{{ proxmox_version.stdout | default('pveversion not found') }}"
+
+- name: Warn when Proxmox PAM login has no configured Linux password
+  ansible.builtin.debug:
+    msg: >-
+      Proxmox user {{ admin_user_name }}@{{ proxmox_admin_user_realm }} uses the Linux PAM password.
+      Set admin_user_password_hash and run bootstrap.yml with admin_user_update_password=always
+      before using this account in the Proxmox web UI.
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_admin_user_realm == "pam"
+    - admin_user_password_hash | default("") | length == 0
+
+- name: Check whether Proxmox user management is available
+  ansible.builtin.command: pveum user list
+  register: proxmox_user_list
+  changed_when: false
+  failed_when: false
+  when: proxmox_manage_admin_user | bool
+
+- name: Set Proxmox admin user identifier
+  ansible.builtin.set_fact:
+    proxmox_admin_user_id: "{{ admin_user_name }}@{{ proxmox_admin_user_realm }}"
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_user_list.rc == 0
+
+- name: Register admin user in Proxmox authentication
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - user
+      - add
+      - "{{ proxmox_admin_user_id }}"
+      - --comment
+      - "{{ proxmox_admin_user_comment }}"
+  register: proxmox_user_add
+  changed_when: proxmox_user_add.rc == 0
+  failed_when:
+    - proxmox_user_add.rc != 0
+    - "'already exists' not in proxmox_user_add.stderr"
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_user_list.rc == 0
+    - proxmox_admin_user_id not in proxmox_user_list.stdout
+
+- name: Read Proxmox access control list
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - acl
+      - list
+      - --output-format
+      - json
+  register: proxmox_acl_list
+  changed_when: false
+  failed_when: false
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_user_list.rc == 0
+
+- name: Check whether Proxmox admin ACL already exists
+  ansible.builtin.set_fact:
+    proxmox_admin_acl_exists: >-
+      {{
+        (
+          proxmox_acl_list.stdout | default('[]') | from_json
+          | selectattr('path', 'equalto', proxmox_admin_user_acl_path)
+          | selectattr('ugid', 'equalto', proxmox_admin_user_id)
+          | selectattr('roleid', 'equalto', proxmox_admin_user_role)
+          | list
+          | length
+        ) > 0
+      }}
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_acl_list.rc == 0
+
+- name: Report Proxmox admin ACL status
+  ansible.builtin.debug:
+    msg: >-
+      Proxmox ACL for {{ proxmox_admin_user_id }} on {{ proxmox_admin_user_acl_path }}
+      with role {{ proxmox_admin_user_role }} {{
+      'already exists' if proxmox_admin_acl_exists | default(false) else 'will be granted' }}.
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_acl_list.rc == 0
+
+- name: Grant Proxmox role to admin user
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - aclmod
+      - "{{ proxmox_admin_user_acl_path }}"
+      - --users
+      - "{{ proxmox_admin_user_id }}"
+      - --roles
+      - "{{ proxmox_admin_user_role }}"
+  register: proxmox_acl_grant
+  changed_when: proxmox_acl_grant.rc == 0
+  when:
+    - proxmox_manage_admin_user | bool
+    - proxmox_acl_list.rc == 0
+    - not proxmox_admin_acl_exists | default(false)

@@ -1,0 +1,78 @@
+---
+- name: Ensure sudo is installed on Debian-family hosts
+  ansible.builtin.apt:
+    name: sudo
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts.os_family == "Debian"
+
+- name: Create the admin user
+  ansible.builtin.user:
+    name: "{{ admin_user_name }}"
+    shell: "{{ admin_user_shell }}"
+    groups: "{{ admin_user_groups | join(',') }}"
+    append: true
+    create_home: true
+    password: "{{ (admin_user_password_hash | length > 0) | ternary(admin_user_password_hash, omit) }}"
+    update_password: "{{ admin_user_update_password }}"
+    password_lock: "{{ (admin_user_password_hash | length == 0) | ternary(omit, false) }}"
+    state: present
+  register: admin_user_info
+
+- name: Check if the named local SSH key already exists
+  ansible.builtin.stat:
+    path: "{{ ssh_pubkey_path }}"
+  delegate_to: localhost
+  become: false
+  register: local_pubkey
+
+- name: Generate a new SSH key locally when no key exists
+  community.crypto.openssh_keypair:
+    path: "{{ ssh_key_path }}"
+    type: ed25519
+    comment: "{{ admin_user_name }}@{{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  when:
+    - ssh_generate_local_key | bool
+    - not local_pubkey.stat.exists
+
+- name: Re-check the public key now that it should exist
+  ansible.builtin.stat:
+    path: "{{ ssh_pubkey_path }}"
+  delegate_to: localhost
+  become: false
+  register: local_pubkey_final
+
+- name: Ensure .ssh directory exists for the admin user
+  ansible.builtin.file:
+    path: "{{ admin_user_info.home }}/.ssh"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0700"
+
+- name: Copy the public key to the admin user's authorized_keys
+  ansible.posix.authorized_key:
+    user: "{{ admin_user_name }}"
+    state: present
+    key: "{{ lookup('file', ssh_pubkey_path) }}"
+  when: local_pubkey_final.stat.exists
+
+- name: Grant passwordless sudo to the admin user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ admin_user_name }}"
+    content: "{{ admin_user_name }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: admin_user_sudo_nopasswd | bool
+
+- name: Report admin user connection details
+  ansible.builtin.debug:
+    msg: >-
+      Admin user {{ admin_user_name }} is present. Public key used: {{ ssh_pubkey_path }}
+      {{ '(newly generated)' if not local_pubkey.stat.exists else '(already existed)' }}.
+      Connect with: ssh -i {{ ssh_key_path }} {{ admin_user_name }}@{{ ansible_host | default(inventory_hostname) }}

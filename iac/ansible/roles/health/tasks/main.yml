@@ -1,0 +1,7 @@
+---
+- name: Report basic health signals
+  ansible.builtin.debug:
+    msg:
+      - "Load average: {{ ansible_facts.loadavg | default('n/a') }}"
+      - "Memory free: {{ ansible_facts.memfree_mb }} MB"
+      - "Uptime: {{ (ansible_facts.uptime_seconds | int / 3600) | round(1) }} hours"

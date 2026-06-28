@@ -1,0 +1,3 @@
+---
+maintenance_auto_reboot: false
+maintenance_reboot_timeout_seconds: 300

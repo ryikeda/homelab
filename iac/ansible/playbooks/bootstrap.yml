@@ -1,0 +1,9 @@
+---
+- name: Bootstrap baseline access and common host configuration
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - common
+    - ssh
+    - admin_user

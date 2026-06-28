@@ -1,0 +1,8 @@
+---
+- name: Report host health and inventory facts
+  hosts: all
+  gather_facts: true
+  become: false
+  roles:
+    - host_info
+    - health

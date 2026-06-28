@@ -1,0 +1,7 @@
+---
+- name: Configure Proxmox hosts
+  hosts: proxmox
+  gather_facts: true
+  become: true
+  roles:
+    - proxmox

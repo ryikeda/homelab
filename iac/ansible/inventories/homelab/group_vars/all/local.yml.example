@@ -1,0 +1,6 @@
+---
+pve_host: 192.0.2.10
+initial_password: change-me
+admin_user_password_hash: "$6$replace-with-real-hash"
+
+ubuntu_host: 192.0.2.11

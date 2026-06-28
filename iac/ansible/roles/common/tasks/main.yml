@@ -1,0 +1,10 @@
+---
+- name: Install common packages on Debian-family hosts
+  ansible.builtin.apt:
+    name: "{{ common_packages + (linux_common_packages | default([])) }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - ansible_facts.os_family == "Debian"
+    - (common_packages + (linux_common_packages | default([]))) | length > 0

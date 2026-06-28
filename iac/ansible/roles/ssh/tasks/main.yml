@@ -1,0 +1,7 @@
+---
+- name: Ensure SSH service is enabled and running
+  ansible.builtin.service:
+    name: "{{ ssh_service_name }}"
+    enabled: true
+    state: started
+  when: ssh_manage_service | bool

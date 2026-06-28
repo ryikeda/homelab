@@ -1,0 +1,4 @@
+---
+- name: Shut down host
+  community.general.shutdown:
+    msg: "Shutdown triggered by Ansible"
