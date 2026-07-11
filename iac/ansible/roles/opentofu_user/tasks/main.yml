@@ -1,0 +1,225 @@
+---
+- name: Check whether Proxmox user management is available
+  ansible.builtin.command: pveum user list
+  register: opentofu_user_list
+  changed_when: false
+  failed_when: false
+  when: opentofu_manage_user | bool
+
+- name: Check current custom role definitions
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - role
+      - list
+      - --output-format
+      - json
+  register: opentofu_role_list_raw
+  changed_when: false
+  failed_when: false
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_user_list.rc == 0
+
+- name: Determine whether the custom OpenTofu role already exists
+  ansible.builtin.set_fact:
+    opentofu_role_entry: >-
+      {{
+        (opentofu_role_list_raw.stdout | default('[]') | from_json)
+        | selectattr('roleid', 'equalto', opentofu_role_name)
+        | list
+      }}
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_role_list_raw.rc == 0
+
+- name: Create the custom OpenTofu role
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - role
+      - add
+      - "{{ opentofu_role_name }}"
+      - --privs
+      - "{{ opentofu_role_privileges | join(',') }}"
+  changed_when: true
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_role_list_raw.rc == 0
+    - opentofu_role_entry | default([]) | length == 0
+
+- name: Converge privileges on the existing custom OpenTofu role
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - role
+      - modify
+      - "{{ opentofu_role_name }}"
+      - --privs
+      - "{{ opentofu_role_privileges | join(',') }}"
+  changed_when: true
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_role_list_raw.rc == 0
+    - opentofu_role_entry | default([]) | length > 0
+    - (opentofu_role_entry[0].privs | default('') | split(',') | reject('equalto', '') | sort | list) != (opentofu_role_privileges | sort | list)
+
+- name: Register OpenTofu user in Proxmox authentication
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - user
+      - add
+      - "{{ opentofu_user_id }}"
+      - --comment
+      - "{{ opentofu_user_comment }}"
+  register: opentofu_user_add
+  changed_when: opentofu_user_add.rc == 0
+  failed_when:
+    - opentofu_user_add.rc != 0
+    - "'already exists' not in opentofu_user_add.stderr"
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_user_list.rc == 0
+    - opentofu_user_id not in opentofu_user_list.stdout
+
+- name: Read Proxmox access control list
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - acl
+      - list
+      - --output-format
+      - json
+  register: opentofu_acl_list
+  changed_when: false
+  failed_when: false
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_user_list.rc == 0
+
+- name: Check whether the OpenTofu ACL already exists
+  ansible.builtin.set_fact:
+    opentofu_acl_exists: >-
+      {{
+        (
+          opentofu_acl_list.stdout | default('[]') | from_json
+          | selectattr('path', 'equalto', opentofu_acl_path)
+          | selectattr('ugid', 'equalto', opentofu_user_id)
+          | selectattr('roleid', 'equalto', opentofu_role_name)
+          | list
+          | length
+        ) > 0
+      }}
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_acl_list.rc == 0
+
+- name: Grant the custom role to the OpenTofu user
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - aclmod
+      - "{{ opentofu_acl_path }}"
+      - --users
+      - "{{ opentofu_user_id }}"
+      - --roles
+      - "{{ opentofu_role_name }}"
+  register: opentofu_acl_grant
+  changed_when: opentofu_acl_grant.rc == 0
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_acl_list.rc == 0
+    - not opentofu_acl_exists | default(false)
+
+- name: Check existing API tokens for the OpenTofu user
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - user
+      - token
+      - list
+      - "{{ opentofu_user_id }}"
+      - --output-format
+      - json
+  register: opentofu_token_list
+  changed_when: false
+  failed_when: false
+  when: opentofu_manage_user | bool
+
+- name: Determine whether the OpenTofu API token already exists
+  ansible.builtin.set_fact:
+    opentofu_token_exists: >-
+      {{
+        (
+          opentofu_token_list.stdout | default('[]') | from_json
+          | selectattr('tokenid', 'equalto', opentofu_token_name)
+          | list
+          | length
+        ) > 0
+      }}
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_token_list.rc == 0
+
+- name: Create the OpenTofu API token
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - user
+      - token
+      - add
+      - "{{ opentofu_user_id }}"
+      - "{{ opentofu_token_name }}"
+      - --privsep
+      - "{{ opentofu_token_privsep | ternary('1', '0') }}"
+      - --output-format
+      - json
+  register: opentofu_token_add
+  changed_when: opentofu_token_add.rc == 0
+  no_log: true
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_token_list.rc == 0
+    - not opentofu_token_exists | default(false)
+
+- name: Ensure local secrets directory exists
+  ansible.builtin.file:
+    path: "{{ opentofu_token_output_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_token_add is not skipped
+    - opentofu_token_add.rc == 0
+
+- name: Save the newly created OpenTofu API token locally
+  ansible.builtin.copy:
+    dest: "{{ opentofu_token_output_path }}"
+    content: |
+      # Generated by the opentofu_user Ansible role on {{ inventory_hostname }}. Do not commit.
+      # Proxmox only reveals this token value once; if this file is lost, re-run the
+      # role with a new opentofu_token_name to mint a replacement token.
+      PROXMOX_VE_ENDPOINT=https://{{ pve_host }}:8006/
+      PROXMOX_VE_API_TOKEN={{ (opentofu_token_add.stdout | from_json)['full-tokenid'] }}={{ (opentofu_token_add.stdout | from_json).value }}
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  no_log: true
+  when:
+    - opentofu_manage_user | bool
+    - opentofu_token_add is not skipped
+    - opentofu_token_add.rc == 0
+
+- name: Report OpenTofu automation user status
+  ansible.builtin.debug:
+    msg: >-
+      OpenTofu user {{ opentofu_user_id }} is present with role {{ opentofu_role_name }}.
+      {{
+        ('A new API token was generated and saved to ' + opentofu_token_output_path + '.')
+        if (opentofu_token_add is not skipped and opentofu_token_add.rc == 0)
+        else ('An API token already exists for this user; run `pveum user token list ' + opentofu_user_id + '` on the host to inspect it, or delete it there to have this role mint a replacement.')
+      }}
+  when: opentofu_manage_user | bool

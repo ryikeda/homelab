@@ -5,3 +5,4 @@
   become: true
   roles:
     - proxmox
+    - opentofu_user

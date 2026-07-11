@@ -10,3 +10,5 @@ proxmox_admin_user_realm: pam
 proxmox_admin_user_comment: "Ansible management user"
 proxmox_admin_user_acl_path: /
 proxmox_admin_user_role: Administrator
+
+opentofu_manage_user: true

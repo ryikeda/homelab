@@ -1,0 +1,69 @@
+---
+opentofu_manage_user: false
+
+opentofu_user_name: opentofu
+opentofu_user_realm: pve
+opentofu_user_id: "{{ opentofu_user_name }}@{{ opentofu_user_realm }}"
+opentofu_user_comment: "OpenTofu/Terraform automation user"
+
+# Custom role scoped for the bpg/proxmox provider, per its documented example:
+# https://github.com/bpg/terraform-provider-proxmox/blob/main/docs/index.md
+# Upstream notes this list is broader than most setups need — trim it once you
+# know which resources your OpenTofu configs actually manage.
+opentofu_role_name: Terraform
+opentofu_role_privileges:
+  - Datastore.Allocate
+  - Datastore.AllocateSpace
+  - Datastore.AllocateTemplate
+  - Datastore.Audit
+  - Group.Allocate
+  - Mapping.Audit
+  - Mapping.Modify
+  - Mapping.Use
+  - Permissions.Modify
+  - Pool.Allocate
+  - Pool.Audit
+  - Realm.Allocate
+  - Realm.AllocateUser
+  - SDN.Allocate
+  - SDN.Audit
+  - SDN.Use
+  - Sys.AccessNetwork
+  - Sys.Audit
+  - Sys.Console
+  - Sys.Incoming
+  - Sys.Modify
+  - Sys.PowerMgmt
+  - Sys.Syslog
+  - User.Modify
+  - VM.Allocate
+  - VM.Audit
+  - VM.Backup
+  - VM.Clone
+  - VM.Config.CDROM
+  - VM.Config.CPU
+  - VM.Config.Cloudinit
+  - VM.Config.Disk
+  - VM.Config.HWType
+  - VM.Config.Memory
+  - VM.Config.Network
+  - VM.Config.Options
+  - VM.Console
+  - VM.GuestAgent.Audit
+  - VM.GuestAgent.FileRead
+  - VM.GuestAgent.FileSystemMgmt
+  - VM.GuestAgent.FileWrite
+  - VM.GuestAgent.Unrestricted
+  - VM.Migrate
+  - VM.PowerMgmt
+  - VM.Replicate
+  - VM.Snapshot
+  - VM.Snapshot.Rollback
+opentofu_acl_path: /
+
+opentofu_token_name: provider
+# false = --privsep 0, the token inherits the user's ACL (upstream's documented default).
+# Set true to require a separate ACL grant on the token itself.
+opentofu_token_privsep: false
+opentofu_token_output_dir: "{{ lookup('env', 'HOME') }}/.proxmox"
+opentofu_token_output_path: "{{ opentofu_token_output_dir }}/opentofu.env"
