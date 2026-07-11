@@ -6,4 +6,5 @@
   roles:
     - proxmox
     - proxmox_storage
+    - proxmox_gpu_passthrough
     - opentofu_user

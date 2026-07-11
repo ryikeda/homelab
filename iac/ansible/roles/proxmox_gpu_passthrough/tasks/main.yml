@@ -1,0 +1,180 @@
+---
+- name: Configure GPU passthrough prerequisites
+  when: proxmox_gpu_passthrough_manage | bool
+  block:
+    - name: Require at least one PCI ID to bind to vfio-pci
+      ansible.builtin.assert:
+        that: proxmox_gpu_passthrough_pci_ids | length > 0
+        fail_msg: >-
+          proxmox_gpu_passthrough_pci_ids is empty. Set it to the GPU's
+          [vendor:device] IDs from `lspci -nn` before enabling this role.
+
+    - name: Read current GRUB kernel command line
+      ansible.builtin.shell: |
+        set -o pipefail
+        grep '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub | head -n1 | cut -d'"' -f2
+      args:
+        executable: /bin/bash
+      register: proxmox_gpu_grub_cmdline
+      changed_when: false
+
+    - name: Determine required IOMMU kernel parameter
+      ansible.builtin.set_fact:
+        proxmox_gpu_iommu_param: "{{ 'intel_iommu=on' if proxmox_gpu_passthrough_iommu_vendor == 'intel' else 'amd_iommu=on' }}"
+
+    - name: Build the desired GRUB kernel command line
+      ansible.builtin.set_fact:
+        proxmox_gpu_grub_desired: >-
+          {{
+            (
+              proxmox_gpu_grub_cmdline.stdout.split()
+              + ([proxmox_gpu_iommu_param] if proxmox_gpu_iommu_param not in proxmox_gpu_grub_cmdline.stdout.split() else [])
+              + (['iommu=pt'] if 'iommu=pt' not in proxmox_gpu_grub_cmdline.stdout.split() else [])
+            ) | join(' ')
+          }}
+
+    - name: Update GRUB kernel command line for IOMMU
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ proxmox_gpu_grub_desired }}"'
+      register: proxmox_gpu_grub_update
+      notify: update grub
+
+    - name: Blacklist native GPU drivers so vfio-pci can claim the card
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/pve-blacklist-gpu.conf
+        content: |
+          {% for driver in proxmox_gpu_passthrough_blacklist_drivers %}
+          blacklist {{ driver }}
+          {% endfor %}
+        mode: "0644"
+      register: proxmox_gpu_blacklist_update
+      notify: update initramfs
+
+    - name: Bind target GPU PCI IDs to vfio-pci
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/pve-vfio-gpu.conf
+        content: |
+          options vfio-pci ids={{ proxmox_gpu_passthrough_pci_ids | join(',') }}
+        mode: "0644"
+      register: proxmox_gpu_vfio_update
+      notify: update initramfs
+
+    - name: Ensure vfio modules load at boot
+      ansible.builtin.lineinfile:
+        path: /etc/modules
+        line: "{{ item }}"
+        create: true
+        mode: "0644"
+      loop:
+        - vfio
+        - vfio_iommu_type1
+        - vfio_pci
+        - vfio_virqfd
+      register: proxmox_gpu_modules_update
+      notify: update initramfs
+
+    - name: Determine the PCI bus address of the mapped GPU
+      ansible.builtin.shell: |
+        set -o pipefail
+        lspci -D -d {{ proxmox_gpu_passthrough_pci_ids[0] }} | head -n1 | cut -d' ' -f1
+      args:
+        executable: /bin/bash
+      register: proxmox_gpu_mapping_path
+      changed_when: false
+      when: proxmox_gpu_passthrough_mapping_name | length > 0
+
+    - name: Determine the IOMMU group of the mapped GPU
+      ansible.builtin.shell: |
+        set -o pipefail
+        basename "$(readlink -f /sys/bus/pci/devices/{{ proxmox_gpu_mapping_path.stdout }}/iommu_group)"
+      args:
+        executable: /bin/bash
+      register: proxmox_gpu_mapping_iommu_group
+      changed_when: false
+      when: proxmox_gpu_passthrough_mapping_name | length > 0
+
+    - name: Determine the subsystem ID of the mapped GPU
+      ansible.builtin.shell: |
+        set -o pipefail
+        lspci -vnn -s {{ proxmox_gpu_mapping_path.stdout }} | grep -m1 'Subsystem:' | grep -oE '\[[0-9a-f]{4}:[0-9a-f]{4}\]' | tr -d '[]'
+      args:
+        executable: /bin/bash
+      register: proxmox_gpu_mapping_subsystem_id
+      changed_when: false
+      when: proxmox_gpu_passthrough_mapping_name | length > 0
+
+    - name: Check existing PCI resource mappings
+      ansible.builtin.command:
+        argv:
+          - pvesh
+          - get
+          - /cluster/mapping/pci
+          - --output-format
+          - json
+      register: proxmox_gpu_mapping_list
+      changed_when: false
+      when: proxmox_gpu_passthrough_mapping_name | length > 0
+
+    - name: Determine the current entry for this resource mapping
+      ansible.builtin.set_fact:
+        proxmox_gpu_mapping_entry: >-
+          {{
+            (proxmox_gpu_mapping_list.stdout | default('[]') | from_json)
+            | selectattr('id', 'equalto', proxmox_gpu_passthrough_mapping_name)
+            | list
+          }}
+        proxmox_gpu_mapping_desired: >-
+          node={{ ansible_facts.hostname }},path={{ proxmox_gpu_mapping_path.stdout }},id={{ proxmox_gpu_passthrough_pci_ids[0] }},iommugroup={{ proxmox_gpu_mapping_iommu_group.stdout }},subsystem-id={{ proxmox_gpu_mapping_subsystem_id.stdout }}
+      when: proxmox_gpu_passthrough_mapping_name | length > 0
+
+    - name: Create the PCI resource mapping
+      ansible.builtin.command:
+        argv:
+          - pvesh
+          - create
+          - /cluster/mapping/pci
+          - --id
+          - "{{ proxmox_gpu_passthrough_mapping_name }}"
+          - --map
+          - "{{ proxmox_gpu_mapping_desired }}"
+      register: proxmox_gpu_mapping_create
+      changed_when: true
+      when:
+        - proxmox_gpu_passthrough_mapping_name | length > 0
+        - proxmox_gpu_mapping_entry | length == 0
+
+    - name: Converge the PCI resource mapping when the target has drifted
+      ansible.builtin.command:
+        argv:
+          - pvesh
+          - set
+          - "/cluster/mapping/pci/{{ proxmox_gpu_passthrough_mapping_name }}"
+          - --map
+          - "{{ proxmox_gpu_mapping_desired }}"
+      register: proxmox_gpu_mapping_converge
+      changed_when: true
+      when:
+        - proxmox_gpu_passthrough_mapping_name | length > 0
+        - proxmox_gpu_mapping_entry | length > 0
+        - proxmox_gpu_mapping_desired not in (proxmox_gpu_mapping_entry[0].map | default([]))
+
+    - name: Report GPU passthrough configuration status
+      ansible.builtin.debug:
+        msg: >-
+          GPU passthrough host prep for {{ proxmox_gpu_passthrough_pci_ids | join(', ') }} is configured.
+          {{
+            (
+              'A reboot is required for IOMMU/vfio changes to take effect — run '
+              + '`ansible-playbook playbooks/reboot.yml --limit ' + inventory_hostname + '` when ready.'
+            )
+            if (proxmox_gpu_grub_update.changed or proxmox_gpu_blacklist_update.changed
+                or proxmox_gpu_vfio_update.changed or proxmox_gpu_modules_update.changed)
+            else 'No changes were needed; the host is already configured.'
+          }}
+          {{
+            ('Resource mapping \'' + proxmox_gpu_passthrough_mapping_name + '\' is registered for use in VM hardware.')
+            if proxmox_gpu_passthrough_mapping_name | length > 0
+            else ''
+          }}

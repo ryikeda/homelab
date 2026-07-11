@@ -1,0 +1,24 @@
+---
+proxmox_gpu_passthrough_manage: false
+
+# intel or amd - selects which IOMMU kernel parameter gets enabled.
+proxmox_gpu_passthrough_iommu_vendor: intel
+
+# PCI vendor:device IDs to bind to vfio-pci so Proxmox stops attaching its
+# native driver and the device becomes available for VM passthrough. Include
+# any sibling functions on the same card (e.g. an HDMI audio controller).
+# Find these with `lspci -nn`. Example: ["10de:1c03", "10de:10f1"]
+proxmox_gpu_passthrough_pci_ids: []
+
+# Native drivers to keep off the card so vfio-pci can claim it instead.
+proxmox_gpu_passthrough_blacklist_drivers:
+  - nouveau
+  - nvidiafb
+  - nvidia
+
+# Cluster-wide Resource Mapping name (Datacenter -> Resource Mappings -> PCI
+# Devices) that VMs reference instead of the raw PCI address, so passthrough
+# keeps working if the card ever moves to a different slot. Maps the first
+# ID in proxmox_gpu_passthrough_pci_ids (the GPU itself). Set to "" to skip
+# creating a mapping.
+proxmox_gpu_passthrough_mapping_name: gpu0
