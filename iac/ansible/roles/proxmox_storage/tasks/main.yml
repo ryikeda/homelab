@@ -1,0 +1,96 @@
+---
+- name: Ensure LVM utilities are present
+  ansible.builtin.apt:
+    name: lvm2
+    state: present
+  when:
+    - proxmox_storage_manage | bool
+    - ansible_facts.os_family == "Debian"
+
+- name: Configure additional VM storage disks
+  when: proxmox_storage_manage | bool
+  block:
+    - name: Check existing LVM physical volumes
+      ansible.builtin.command: pvs --noheadings -o pv_name
+      register: proxmox_storage_pv_raw
+      changed_when: false
+
+    - name: Check existing LVM volume groups
+      ansible.builtin.command: vgs --noheadings -o vg_name
+      register: proxmox_storage_vg_raw
+      changed_when: false
+
+    - name: Check registered Proxmox storage
+      ansible.builtin.command: pvesm status
+      register: proxmox_storage_status
+      changed_when: false
+
+    - name: Record known physical volumes and volume groups
+      ansible.builtin.set_fact:
+        proxmox_storage_pvs: "{{ proxmox_storage_pv_raw.stdout_lines | map('trim') | list }}"
+        proxmox_storage_vgs: "{{ proxmox_storage_vg_raw.stdout_lines | map('trim') | list }}"
+
+    - name: Inspect filesystem signature on target disks
+      ansible.builtin.command: blkid -o value -s TYPE {{ item.device }}
+      register: proxmox_storage_blkid
+      changed_when: false
+      failed_when: false
+      loop: "{{ proxmox_storage_disks }}"
+      loop_control:
+        label: "{{ item.device }}"
+
+    - name: Refuse to touch disks with an unexpected filesystem signature
+      ansible.builtin.fail:
+        msg: >-
+          {{ item.item.device }} already has a '{{ item.stdout }}' filesystem signature.
+          Refusing to overwrite it with an LVM physical volume; wipe it manually first
+          (e.g. wipefs -a {{ item.item.device }}) once you're sure it's unused.
+      loop: "{{ proxmox_storage_blkid.results }}"
+      loop_control:
+        label: "{{ item.item.device }}"
+      when:
+        - item.item.device not in proxmox_storage_pvs
+        - item.stdout | default('') | length > 0
+        - item.stdout != 'LVM2_member'
+
+    - name: Create LVM physical volumes on target disks
+      ansible.builtin.command: pvcreate {{ item.device }}
+      loop: "{{ proxmox_storage_disks }}"
+      loop_control:
+        label: "{{ item.device }}"
+      when: item.device not in proxmox_storage_pvs
+      changed_when: true
+
+    - name: Create LVM volume groups for target disks
+      ansible.builtin.command: vgcreate {{ item.vg_name }} {{ item.device }}
+      loop: "{{ proxmox_storage_disks }}"
+      loop_control:
+        label: "{{ item.vg_name }}"
+      when: item.vg_name not in proxmox_storage_vgs
+      changed_when: true
+
+    - name: Register volume groups as Proxmox VM storage
+      ansible.builtin.command:
+        argv:
+          - pvesm
+          - add
+          - lvm
+          - "{{ item.storage_id }}"
+          - --vgname
+          - "{{ item.vg_name }}"
+          - --content
+          - "{{ item.content | default('images,rootdir') }}"
+      loop: "{{ proxmox_storage_disks }}"
+      loop_control:
+        label: "{{ item.storage_id }}"
+      when: (proxmox_storage_status.stdout_lines | select('match', '^' + item.storage_id + '\s') | list | length) == 0
+      changed_when: true
+
+    - name: Report configured VM storage
+      ansible.builtin.debug:
+        msg: >-
+          Storage '{{ item.storage_id }}' ({{ item.vg_name }} on {{ item.device }})
+          is configured for content: {{ item.content | default('images,rootdir') }}.
+      loop: "{{ proxmox_storage_disks }}"
+      loop_control:
+        label: "{{ item.storage_id }}"

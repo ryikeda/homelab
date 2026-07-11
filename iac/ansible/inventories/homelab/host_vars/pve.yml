@@ -1,0 +1,7 @@
+---
+proxmox_storage_manage: true
+proxmox_storage_disks:
+  - device: /dev/sdb1
+    vg_name: vmstore
+    storage_id: local-vmstore
+    content: images,rootdir

@@ -1,0 +1,11 @@
+---
+proxmox_storage_manage: false
+
+# Each entry turns one disk/partition into an LVM-backed Proxmox storage pool
+# for VM images and container rootdirs. Example:
+# proxmox_storage_disks:
+#   - device: /dev/sdb1
+#     vg_name: vmdata
+#     storage_id: local-vmdata
+#     content: images,rootdir
+proxmox_storage_disks: []

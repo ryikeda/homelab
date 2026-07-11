@@ -79,3 +79,18 @@ Then put the hash in `inventories/homelab/group_vars/all/local.yml` as `admin_us
 `playbooks/proxmox.yml` also runs the `opentofu_user` role, which creates a separate `opentofu@pve` Proxmox user (PVE realm, API token only, no SSH/shell access) scoped to a custom `Terraform` role instead of `Administrator`. This keeps OpenTofu's credentials independent from the `ansible` user used for host/SSH management.
 
 On first run it mints an API token and writes it to `~/.proxmox/opentofu.env` on the controller (outside this repo, not committed). Proxmox only shows a token's secret once at creation, so if that file is lost, either recover the value from wherever OpenTofu's provider config was pointed at it, or delete the token with `pveum user token remove opentofu@pve provider` on the Proxmox host and re-run `ansible-playbook playbooks/proxmox.yml` to mint a replacement.
+
+## VM storage disks
+
+`playbooks/proxmox.yml` also runs the `proxmox_storage` role, which turns a spare disk/partition into an LVM-backed Proxmox storage pool for VM disk images and container rootdirs (equivalent to `pvcreate` + `vgcreate` + `pvesm add lvm`). It's off by default (`proxmox_storage_manage: false`); enable it per host with a `proxmox_storage_disks` list, e.g. in `inventories/homelab/host_vars/<hostname>.yml`:
+
+```yaml
+proxmox_storage_manage: true
+proxmox_storage_disks:
+  - device: /dev/sdb1
+    vg_name: vmstore
+    storage_id: local-vmstore
+    content: images,rootdir
+```
+
+Add one list entry per disk to cover additional drives. The role refuses to touch a device that already carries a filesystem signature other than `LVM2_member`, so it won't silently overwrite data — wipe the disk manually first (`wipefs -a <device>`) once you're sure it's unused. Everything else is idempotent: existing PVs, VGs, and registered storage IDs are detected and left alone.
