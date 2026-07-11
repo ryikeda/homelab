@@ -8,3 +8,6 @@ iac/ansible/inventories/homelab/group_vars/all/local.yml
 # Ansible runtime artifacts.
 iac/ansible/.ansible/
 *.retry
+
+.DS_Store
+
