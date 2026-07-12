@@ -1,0 +1,8 @@
+#cloud-config
+# Ubuntu's cloud image doesn't reliably ship qemu-guest-agent, so install and
+# enable it explicitly rather than depending on the base image having it.
+package_update: false
+packages:
+  - qemu-guest-agent
+runcmd:
+  - systemctl enable --now qemu-guest-agent

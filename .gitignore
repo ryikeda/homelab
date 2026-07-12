@@ -9,5 +9,14 @@ iac/ansible/inventories/homelab/group_vars/all/local.yml
 iac/ansible/.ansible/
 *.retry
 
+# OpenTofu/Terraform runtime artifacts and local state.
+# .terraform.lock.hcl is intentionally NOT ignored; it should be committed.
+iac/opentofu/**/.terraform/
+iac/opentofu/**/terraform.tfstate
+iac/opentofu/**/terraform.tfstate.backup
+iac/opentofu/**/crash.log
+iac/opentofu/**/*.tfvars
+iac/opentofu/**/*.tfvars.json
+
 .DS_Store
 
