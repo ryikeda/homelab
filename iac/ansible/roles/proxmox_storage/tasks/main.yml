@@ -94,3 +94,38 @@
       loop: "{{ proxmox_storage_disks }}"
       loop_control:
         label: "{{ item.storage_id }}"
+
+- name: Converge content types on existing storage entries
+  when:
+    - proxmox_storage_manage | bool
+    - proxmox_storage_content | length > 0
+  block:
+    - name: Read current configuration for each storage entry
+      ansible.builtin.command:
+        argv:
+          - pvesh
+          - get
+          - "/storage/{{ item.key }}"
+          - --output-format
+          - json
+      register: proxmox_storage_content_current
+      changed_when: false
+      loop: "{{ proxmox_storage_content | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Update content types where they've drifted
+      ansible.builtin.command:
+        argv:
+          - pvesm
+          - set
+          - "{{ item.item.key }}"
+          - --content
+          - "{{ item.item.value | join(',') }}"
+      loop: "{{ proxmox_storage_content_current.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      when: >-
+        ((item.stdout | from_json).content | default('') | split(',') | reject('equalto', '') | sort | list)
+        != (item.item.value | sort | list)
+      changed_when: true

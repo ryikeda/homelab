@@ -95,6 +95,20 @@ proxmox_storage_disks:
 
 Add one list entry per disk to cover additional drives. The role refuses to touch a device that already carries a filesystem signature other than `LVM2_member`, so it won't silently overwrite data — wipe the disk manually first (`wipefs -a <device>`) once you're sure it's unused. Everything else is idempotent: existing PVs, VGs, and registered storage IDs are detected and left alone.
 
+The same role can also converge content types on storage that already exists, rather than creating anything new — e.g. enabling `snippets` on the built-in `local` storage so OpenTofu can upload cloud-init vendor-data files:
+
+```yaml
+proxmox_storage_content:
+  local:
+    - iso
+    - vztmpl
+    - backup
+    - import
+    - snippets
+```
+
+Each value is the *full* desired content type list for that storage id (`pvesm set --content` replaces the list, it doesn't append) — the role only runs `pvesm set` when the current list differs from what's declared.
+
 ## GPU passthrough (host prep)
 
 `playbooks/proxmox.yml` also runs the `proxmox_gpu_passthrough` role, which prepares the host so a GPU can later be passed through to a VM: it enables IOMMU on the kernel command line, blacklists the GPU's native driver, and binds the card's PCI IDs to `vfio-pci`. It only touches the host side — actually attaching the device to a specific VM (the `hostpci0` config) is a per-VM concern that belongs in OpenTofu when you provision that VM, not here.

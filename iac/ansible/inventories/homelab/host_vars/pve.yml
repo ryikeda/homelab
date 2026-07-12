@@ -6,6 +6,14 @@ proxmox_storage_disks:
     storage_id: local-vmstore
     content: images,rootdir
 
+proxmox_storage_content:
+  local:
+    - iso
+    - vztmpl
+    - backup
+    - import
+    - snippets
+
 proxmox_gpu_passthrough_manage: true
 proxmox_gpu_passthrough_iommu_vendor: intel
 proxmox_gpu_passthrough_pci_ids:

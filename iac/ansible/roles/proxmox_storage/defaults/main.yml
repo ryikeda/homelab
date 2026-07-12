@@ -9,3 +9,17 @@ proxmox_storage_manage: false
 #     storage_id: local-vmdata
 #     content: images,rootdir
 proxmox_storage_disks: []
+
+# Converge content types on storage that already exists (e.g. enabling
+# 'snippets' on the built-in 'local' storage, needed for OpenTofu to upload
+# cloud-init vendor-data files). Each value is the FULL desired content type
+# list for that storage id — pvesm set replaces it, it doesn't append.
+# Example:
+# proxmox_storage_content:
+#   local:
+#     - iso
+#     - vztmpl
+#     - backup
+#     - import
+#     - snippets
+proxmox_storage_content: {}
