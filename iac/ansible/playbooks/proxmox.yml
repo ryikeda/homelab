@@ -4,10 +4,10 @@
   gather_facts: true
   become: true
   roles:
-    - proxmox
+    - proxmox_admin_user
     - proxmox_storage
     - proxmox_gpu_passthrough
     - proxmox_vm_template
     - proxmox_lxc_template
     - proxmox_backup
-    - opentofu_user
+    - proxmox_opentofu_user

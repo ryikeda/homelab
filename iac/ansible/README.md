@@ -76,7 +76,7 @@ Then put the hash in `inventories/homelab/group_vars/all/local.yml` as `admin_us
 
 ## OpenTofu automation user
 
-`playbooks/proxmox.yml` also runs the `opentofu_user` role, which creates a separate `opentofu@pve` Proxmox user (PVE realm, API token only, no SSH/shell access) scoped to a custom `Terraform` role instead of `Administrator`. This keeps OpenTofu's credentials independent from the `ansible` user used for host/SSH management.
+`playbooks/proxmox.yml` also runs the `proxmox_opentofu_user` role, which creates a separate `opentofu@pve` Proxmox user (PVE realm, API token only, no SSH/shell access) scoped to a custom `Terraform` role instead of `Administrator`. This keeps OpenTofu's credentials independent from the `ansible` user used for host/SSH management.
 
 On first run it mints an API token and writes it to `~/.proxmox/opentofu.env` on the controller (outside this repo, not committed). Proxmox only shows a token's secret once at creation, so if that file is lost, either recover the value from wherever OpenTofu's provider config was pointed at it, or delete the token with `pveum user token remove opentofu@pve provider` on the Proxmox host and re-run `ansible-playbook playbooks/proxmox.yml` to mint a replacement.
 
