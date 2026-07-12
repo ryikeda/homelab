@@ -1,0 +1,16 @@
+---
+proxmox_lxc_templates_manage: false
+
+# Storage to download templates into; must have the 'vztmpl' content type
+# (Proxmox's default 'local' storage already does).
+proxmox_lxc_template_storage: local
+
+# Exact appliance template filenames to have on hand, as Proxmox names them
+# (version/build numbers included, since those change over time). Find the
+# current filename with:
+#   pveam update && pveam available --section system | grep -i ubuntu
+#
+# proxmox_lxc_templates:
+#   - ubuntu-24.04-standard_24.04-1_amd64.tar.zst
+#   - debian-12-standard_12.7-1_amd64.tar.zst
+proxmox_lxc_templates: []

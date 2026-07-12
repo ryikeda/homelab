@@ -153,3 +153,22 @@ proxmox_vm_templates:
 Each entry is independent — add as many OSes as you want, each with its own `vmid`, image, storage target, and sizing (see `roles/proxmox_vm_template/defaults/main.yml` for every field, including `bios: ovmf` for UEFI images and `cloud_init: false` for images that don't use it). Matching is by `vmid`: once a template with that ID exists, the role leaves it alone — delete the VM and re-run to rebuild it, there's no in-place drift correction for VM hardware.
 
 Verify the image URLs and, where available, pin an `image_checksum` (e.g. `"sha256:<hex>"`, passed straight to Ansible's `get_url`) before enabling this in your own `host_vars` — these are convenience examples, not vetted for your setup.
+
+## LXC container templates
+
+These are a different artifact from the VM templates above — an LXC container is built from a rootfs tarball (`vztmpl` content type), cloned via `pct create`/`pct clone`, not the qcow2/raw disk images `qm clone` uses. `playbooks/proxmox.yml` also runs the `proxmox_lxc_template` role for these, using Proxmox's own appliance catalog (`pveam`) instead of a raw download URL:
+
+```yaml
+proxmox_lxc_templates_manage: true
+proxmox_lxc_template_storage: local   # must have the vztmpl content type
+proxmox_lxc_templates:
+  - ubuntu-24.04-standard_24.04-1_amd64.tar.zst
+```
+
+Template filenames are versioned and change over time, so look up the current one before adding it:
+
+```sh
+pveam update && pveam available --section system | grep -i ubuntu
+```
+
+The role runs `pveam update` to refresh the catalog, then downloads only the filenames in the list that aren't already present on that storage — idempotent, and safe to add more entries later. It's off by default and not yet enabled for any host.

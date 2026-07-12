@@ -8,4 +8,5 @@
     - proxmox_storage
     - proxmox_gpu_passthrough
     - proxmox_vm_template
+    - proxmox_lxc_template
     - opentofu_user
