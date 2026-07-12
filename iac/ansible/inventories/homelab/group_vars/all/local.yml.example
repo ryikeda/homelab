@@ -4,3 +4,6 @@ initial_password: change-me
 admin_user_password_hash: "$6$replace-with-real-hash"
 
 ubuntu_host: 192.0.2.11
+
+nas_backup_server: 192.0.2.20
+nas_backup_export: /volume1/pve-backups

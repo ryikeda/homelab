@@ -24,3 +24,17 @@ proxmox_lxc_templates_manage: true
 proxmox_lxc_template_storage: local
 proxmox_lxc_templates:
   - ubuntu-24.04-standard_24.04-2_amd64.tar.zst
+
+proxmox_backup_manage: true
+proxmox_backup_nfs_storage_id: nas-backup
+proxmox_backup_nfs_server: "{{ nas_backup_server }}"
+proxmox_backup_nfs_export: "{{ nas_backup_export }}"
+
+proxmox_backup_jobs:
+  - id: daily-vm-backup
+    schedule: "02:00"
+    storage: nas-backup
+    guests: all
+    mode: snapshot
+    compress: zstd
+    retention: "keep-last=7,keep-daily=7,keep-weekly=4,keep-monthly=3"

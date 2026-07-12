@@ -1,0 +1,40 @@
+---
+- name: "{{ backup_job.id }}: determine whether the backup job already exists"
+  ansible.builtin.set_fact:
+    proxmox_backup_job_entry: >-
+      {{
+        (proxmox_backup_job_list.stdout | default('[]') | from_json)
+        | selectattr('id', 'equalto', backup_job.id)
+        | list
+      }}
+
+- name: "{{ backup_job.id }}: create the backup job"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        ['pvesh', 'create', '/cluster/backup', '--id', backup_job.id,
+         '--schedule', backup_job.schedule,
+         '--storage', backup_job.storage,
+         '--mode', backup_job.mode | default('snapshot'),
+         '--compress', backup_job.compress | default('zstd'),
+         '--enabled', ('1' if backup_job.enabled | default(true) else '0')]
+        + (['--all', '1'] if (backup_job.guests | default('all')) == 'all'
+           else ['--vmid', (backup_job.guests | map('string') | join(','))])
+        + (['--prune-backups', backup_job.retention] if backup_job.retention is defined else [])
+      }}
+  when: proxmox_backup_job_entry | length == 0
+  changed_when: true
+
+- name: "{{ backup_job.id }}: report backup job status"
+  ansible.builtin.debug:
+    msg: >-
+      Backup job '{{ backup_job.id }}' ({{ backup_job.schedule }} -> {{ backup_job.storage }})
+      {{
+        'was created.'
+        if proxmox_backup_job_entry | length == 0
+        else (
+          'already exists; skipped. Edit it with `pvesh set /cluster/backup/' + backup_job.id
+          + '` or delete it with `pvesh delete /cluster/backup/' + backup_job.id
+          + '` on the host and re-run to change it.'
+        )
+      }}

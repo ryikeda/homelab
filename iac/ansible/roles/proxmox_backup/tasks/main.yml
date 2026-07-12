@@ -1,0 +1,78 @@
+---
+- name: Register NFS backup storage
+  when:
+    - proxmox_backup_manage | bool
+    - proxmox_backup_manage_nfs_storage | bool
+  block:
+    - name: Require the NFS server and export to be set
+      ansible.builtin.assert:
+        that:
+          - proxmox_backup_nfs_server | length > 0
+          - proxmox_backup_nfs_export | length > 0
+        fail_msg: >-
+          proxmox_backup_nfs_server and proxmox_backup_nfs_export must be set
+          before enabling proxmox_backup_manage_nfs_storage.
+
+    - name: Ensure NFS client utilities are present
+      ansible.builtin.apt:
+        name: nfs-common
+        state: present
+      when: ansible_facts.os_family == "Debian"
+
+    - name: Check whether the NFS export is visible from this host
+      ansible.builtin.command: showmount -e {{ proxmox_backup_nfs_server }}
+      register: proxmox_backup_showmount
+      changed_when: false
+      failed_when: false
+
+    - name: Warn if the NFS export couldn't be confirmed
+      ansible.builtin.debug:
+        msg: >-
+          Could not confirm {{ proxmox_backup_nfs_export }} is exported by
+          {{ proxmox_backup_nfs_server }} (showmount failed or didn't list
+          it). Continuing anyway — pvesm add will fail loudly if the mount
+          doesn't actually work.
+      when: >-
+        proxmox_backup_showmount.rc != 0
+        or proxmox_backup_nfs_export not in proxmox_backup_showmount.stdout
+
+    - name: Check registered Proxmox storage
+      ansible.builtin.command: pvesm status
+      register: proxmox_backup_storage_status
+      changed_when: false
+
+    - name: Register the NFS storage for backups
+      ansible.builtin.command:
+        argv: >-
+          {{
+            ['pvesm', 'add', 'nfs', proxmox_backup_nfs_storage_id,
+             '--server', proxmox_backup_nfs_server,
+             '--export', proxmox_backup_nfs_export,
+             '--content', proxmox_backup_nfs_content]
+            + (['--options', proxmox_backup_nfs_options] if proxmox_backup_nfs_options | length > 0 else [])
+          }}
+      when: >-
+        (proxmox_backup_storage_status.stdout_lines
+          | select('match', '^' + proxmox_backup_nfs_storage_id + '\s')
+          | list | length) == 0
+      changed_when: true
+
+- name: Check existing vzdump backup jobs
+  ansible.builtin.command:
+    argv:
+      - pvesh
+      - get
+      - /cluster/backup
+      - --output-format
+      - json
+  register: proxmox_backup_job_list
+  changed_when: false
+  when: proxmox_backup_manage | bool
+
+- name: Manage each configured backup job
+  ansible.builtin.include_tasks: backup_job.yml
+  loop: "{{ proxmox_backup_jobs }}"
+  loop_control:
+    loop_var: backup_job
+    label: "{{ backup_job.id }}"
+  when: proxmox_backup_manage | bool

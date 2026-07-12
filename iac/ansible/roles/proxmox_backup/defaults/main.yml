@@ -1,0 +1,27 @@
+---
+proxmox_backup_manage: false
+
+# Set false if the NFS storage is already registered (e.g. by hand, or you
+# only want this role to manage backup jobs against an existing storage id).
+proxmox_backup_manage_nfs_storage: true
+
+proxmox_backup_nfs_storage_id: nas-backup
+proxmox_backup_nfs_server: ""   # NAS IP/hostname, e.g. 192.168.1.50
+proxmox_backup_nfs_export: ""   # export path on the NAS, e.g. /volume1/proxmox-backup
+proxmox_backup_nfs_content: backup
+proxmox_backup_nfs_options: ""  # optional extra pvesm mount options, e.g. "vers=4.1"
+
+# vzdump backup jobs (Datacenter -> Backup). Existing jobs (matched by id)
+# are left alone — edit or delete with `pvesh set|delete /cluster/backup/<id>`
+# on the host and re-run to change one. Example:
+#
+# proxmox_backup_jobs:
+#   - id: daily-vm-backup
+#     schedule: "02:00"      # Proxmox systemd calendar-event syntax, e.g. "02:00" or "mon..fri 02:00"
+#     storage: nas-backup
+#     guests: all            # 'all', or a list of vmids, e.g. [100, 101]
+#     mode: snapshot         # snapshot | suspend | stop
+#     compress: zstd         # 0 | gzip | lzo | zstd
+#     retention: "keep-last=7,keep-daily=7,keep-weekly=4,keep-monthly=6"
+#     enabled: true
+proxmox_backup_jobs: []

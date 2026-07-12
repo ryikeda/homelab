@@ -172,3 +172,27 @@ pveam update && pveam available --section system | grep -i ubuntu
 ```
 
 The role runs `pveam update` to refresh the catalog, then downloads only the filenames in the list that aren't already present on that storage — idempotent, and safe to add more entries later. It's off by default and not yet enabled for any host.
+
+## NFS backup storage and backup jobs
+
+`playbooks/proxmox.yml` also runs the `proxmox_backup` role, which registers a NAS's NFS export as Proxmox storage and configures `vzdump` backup jobs (Datacenter → Backup) against it:
+
+```yaml
+proxmox_backup_manage: true
+proxmox_backup_nfs_storage_id: nas-backup
+proxmox_backup_nfs_server: 192.168.1.50
+proxmox_backup_nfs_export: /volume1/proxmox-backup
+
+proxmox_backup_jobs:
+  - id: daily-vm-backup
+    schedule: "02:00"
+    storage: nas-backup
+    guests: all
+    mode: snapshot
+    compress: zstd
+    retention: "keep-last=7,keep-daily=7,keep-weekly=4,keep-monthly=6"
+```
+
+The storage registration is idempotent (checked against `pvesm status`) and installs `nfs-common` if missing; it also runs `showmount -e` first and just warns (doesn't block) if the export isn't visible, since `pvesm add` will fail loudly on its own if the mount is actually broken. Set `proxmox_backup_manage_nfs_storage: false` if the storage is already registered and you only want this role to manage jobs.
+
+Backup jobs are matched by `id` and, like the VM/LXC templates, only created once — the role won't touch an existing job's schedule/retention/etc. To change one, edit or delete it directly on the host (`pvesh set /cluster/backup/<id> ...` or `pvesh delete /cluster/backup/<id>`) and re-run to recreate it. `guests: all` backs up every VM/container; give it a list of vmids (e.g. `[100, 101]`) to scope it instead. It's off by default and not yet enabled for any host — you'll need your NAS's real IP and export path before turning it on.
