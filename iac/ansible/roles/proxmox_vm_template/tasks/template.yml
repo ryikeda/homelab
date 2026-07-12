@@ -1,0 +1,92 @@
+---
+- name: "{{ vm_template.name }}: check whether the template VM already exists"
+  ansible.builtin.command: qm status {{ vm_template.vmid }}
+  register: proxmox_vm_template_status
+  changed_when: false
+  failed_when: false
+
+- name: "{{ vm_template.name }}: build the template"
+  when: proxmox_vm_template_status.rc != 0
+  block:
+    - name: "{{ vm_template.name }}: download the cloud image"
+      ansible.builtin.get_url:
+        url: "{{ vm_template.image_url }}"
+        dest: "{{ proxmox_vm_templates_download_dir }}/{{ vm_template.name }}.img"
+        checksum: "{{ vm_template.image_checksum | default(omit) }}"
+        mode: "0644"
+
+    - name: "{{ vm_template.name }}: create the base VM"
+      ansible.builtin.command:
+        argv:
+          - qm
+          - create
+          - "{{ vm_template.vmid }}"
+          - --name
+          - "{{ vm_template.name }}"
+          - --memory
+          - "{{ vm_template.memory | default(2048) }}"
+          - --cores
+          - "{{ vm_template.cores | default(2) }}"
+          - --net0
+          - "virtio,bridge={{ vm_template.bridge | default('vmbr0') }}"
+          - --machine
+          - "{{ vm_template.machine | default('q35') }}"
+          - --bios
+          - "{{ vm_template.bios | default('seabios') }}"
+          - --scsihw
+          - virtio-scsi-pci
+          - --agent
+          - "enabled=1"
+          - --serial0
+          - socket
+          - --vga
+          - serial0
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: add an EFI disk for OVMF firmware"
+      ansible.builtin.command: >-
+        qm set {{ vm_template.vmid }}
+        --efidisk0 {{ vm_template.storage }}:0,efitype=4m,pre-enrolled-keys=0
+      when: (vm_template.bios | default('seabios')) == 'ovmf'
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: import the downloaded disk"
+      ansible.builtin.command: >-
+        qm importdisk {{ vm_template.vmid }}
+        {{ proxmox_vm_templates_download_dir }}/{{ vm_template.name }}.img
+        {{ vm_template.storage }}
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: attach the imported disk as scsi0"
+      ansible.builtin.command: >-
+        qm set {{ vm_template.vmid }}
+        --scsi0 {{ vm_template.storage }}:vm-{{ vm_template.vmid }}-disk-0
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: grow the disk to the requested size"
+      ansible.builtin.command: qm resize {{ vm_template.vmid }} scsi0 {{ vm_template.disk_size }}
+      when: vm_template.disk_size is defined
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: attach a cloud-init drive"
+      ansible.builtin.command: qm set {{ vm_template.vmid }} --ide2 {{ vm_template.storage }}:cloudinit
+      when: vm_template.cloud_init | default(true)
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: set the boot disk"
+      ansible.builtin.command: qm set {{ vm_template.vmid }} --boot order=scsi0
+      changed_when: true
+
+    - name: "{{ vm_template.name }}: convert the VM into a template"
+      ansible.builtin.command: qm template {{ vm_template.vmid }}
+      changed_when: true
+
+- name: "{{ vm_template.name }}: report template status"
+  ansible.builtin.debug:
+    msg: >-
+      Template '{{ vm_template.name }}' (vmid {{ vm_template.vmid }})
+      {{
+        ('was created from ' + vm_template.image_url)
+        if proxmox_vm_template_status.rc != 0
+        else 'already exists; skipped. Delete the VM and re-run to rebuild it.'
+      }}

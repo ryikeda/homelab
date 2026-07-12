@@ -1,0 +1,35 @@
+---
+proxmox_vm_templates_manage: false
+
+# Where cloud images get downloaded to before qm importdisk copies them into
+# the target storage. Not a Proxmox content directory, just scratch space.
+proxmox_vm_templates_download_dir: /var/lib/vz/template/cloudimg
+
+# Each entry downloads one cloud image and turns it into a Proxmox VM
+# template that OpenTofu can clone. Existing templates (matched by vmid) are
+# left alone — delete the VM manually and re-run to rebuild one. Example:
+#
+# proxmox_vm_templates:
+#   - name: ubuntu-2404
+#     vmid: 9000
+#     image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+#     storage: local-vmstore
+#     bridge: vmbr0
+#     cores: 2
+#     memory: 2048
+#     disk_size: 20G        # optional, grows the imported disk to at least this size
+#     cloud_init: true      # optional, default true; attaches an ide2 cloud-init drive
+#     machine: q35          # optional, default q35
+#     bios: seabios         # optional, default seabios; use ovmf for UEFI (adds an EFI disk)
+#     image_checksum: ""    # optional, e.g. "sha256:<hex>" passed straight to get_url
+#
+#   - name: debian-12
+#     vmid: 9001
+#     image_url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
+#     storage: local-vmstore
+#
+#   - name: arch
+#     vmid: 9002
+#     image_url: https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2
+#     storage: local-vmstore
+proxmox_vm_templates: []

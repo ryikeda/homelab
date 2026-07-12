@@ -1,0 +1,15 @@
+---
+- name: Ensure the cloud image download directory exists
+  ansible.builtin.file:
+    path: "{{ proxmox_vm_templates_download_dir }}"
+    state: directory
+    mode: "0755"
+  when: proxmox_vm_templates_manage | bool
+
+- name: Provision each configured VM template
+  ansible.builtin.include_tasks: template.yml
+  loop: "{{ proxmox_vm_templates }}"
+  loop_control:
+    loop_var: vm_template
+    label: "{{ vm_template.name }} ({{ vm_template.vmid }})"
+  when: proxmox_vm_templates_manage | bool

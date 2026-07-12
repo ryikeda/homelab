@@ -125,3 +125,31 @@ This role only covers host-side prep. Two steps stay outside it, to remember whe
 
 - **OpenTofu**: the VM resource needs a `hostpci` block that references the mapping by name (e.g. `mapping = "gpu0"`), not a raw PCI ID — that's the Terraform-side equivalent of picking "Mapped Device" in the UI.
 - **Guest driver install**: attaching the PCI device just makes it visible to the VM; the guest still needs its own GPU driver installed and the VM rebooted before anything (e.g. `nvidia-smi`) can use it. That's a per-VM, post-boot step (cloud-init script or a guest-facing Ansible role), not something this host-level role should do.
+
+## VM templates
+
+`playbooks/proxmox.yml` also runs the `proxmox_vm_template` role, which downloads a cloud image and turns it into a Proxmox VM template (`qm importdisk` + a cloud-init drive + `qm template`) that OpenTofu can clone per VM. It's off by default; enable it with a `proxmox_vm_templates` list, one entry per OS:
+
+```yaml
+proxmox_vm_templates_manage: true
+proxmox_vm_templates:
+  - name: ubuntu-2404
+    vmid: 9000
+    image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+    storage: local-vmstore
+    disk_size: 20G
+
+  - name: debian-12
+    vmid: 9001
+    image_url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
+    storage: local-vmstore
+
+  - name: arch
+    vmid: 9002
+    image_url: https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2
+    storage: local-vmstore
+```
+
+Each entry is independent — add as many OSes as you want, each with its own `vmid`, image, storage target, and sizing (see `roles/proxmox_vm_template/defaults/main.yml` for every field, including `bios: ovmf` for UEFI images and `cloud_init: false` for images that don't use it). Matching is by `vmid`: once a template with that ID exists, the role leaves it alone — delete the VM and re-run to rebuild it, there's no in-place drift correction for VM hardware.
+
+Verify the image URLs and, where available, pin an `image_checksum` (e.g. `"sha256:<hex>"`, passed straight to Ansible's `get_url`) before enabling this in your own `host_vars` — these are convenience examples, not vetted for your setup.

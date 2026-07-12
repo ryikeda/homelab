@@ -10,3 +10,12 @@ proxmox_gpu_passthrough_manage: true
 proxmox_gpu_passthrough_iommu_vendor: intel
 proxmox_gpu_passthrough_pci_ids:
   - "10de:1c03"
+
+proxmox_vm_templates_manage: true
+proxmox_vm_templates:
+  - name: ubuntu-2404
+    vmid: 9000
+    image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+    storage: local-vmstore
+    bridge: vmbr0
+    disk_size: 20G
