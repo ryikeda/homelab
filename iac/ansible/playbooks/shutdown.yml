@@ -1,6 +1,9 @@
 ---
 - name: Shut down selected hosts
-  hosts: all
+  # Explicit allow-list, not "all" - opnsense's router host uses
+  # ansible_connection: local, so an "all" pattern would run this locally on
+  # the controller instead of skipping it, shutting down the wrong machine.
+  hosts: proxmox:linux
   gather_facts: false
   become: true
   roles:

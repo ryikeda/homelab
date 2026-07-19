@@ -1,6 +1,6 @@
 ---
 - name: Reboot selected hosts
-  hosts: all
+  hosts: proxmox:linux
   gather_facts: false
   become: true
   roles:

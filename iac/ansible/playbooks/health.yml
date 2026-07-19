@@ -1,6 +1,6 @@
 ---
 - name: Report host health and inventory facts
-  hosts: all
+  hosts: proxmox:linux
   gather_facts: true
   become: false
   roles:
