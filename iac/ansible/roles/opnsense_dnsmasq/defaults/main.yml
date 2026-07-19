@@ -1,0 +1,11 @@
+---
+opnsense_dnsmasq_manage: false
+
+opnsense_dnsmasq_ranges: []
+# ansibleguy.opnsense.dnsmasq_range matches "interface" by its display name
+# (e.g. "LAN", "CAMERAS"), unlike the rule module in opnsense_firewall which
+# uses the lowercase assignment key (e.g. "lan") - not interchangeable.
+# - description: LAN DHCP range
+#   interface: LAN
+#   start_addr: 10.10.10.100
+#   end_addr: 10.10.10.200

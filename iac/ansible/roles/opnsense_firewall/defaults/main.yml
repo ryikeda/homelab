@@ -1,0 +1,9 @@
+---
+opnsense_firewall_manage: false
+
+opnsense_firewall_rules: []
+# - description: Allow LAN to CAMERAS (NVR access)
+#   interface: [lan]
+#   action: pass
+#   source_net: any
+#   destination_net: "{{ opnsense_cameras_subnet }}"

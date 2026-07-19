@@ -1,5 +1,6 @@
 ---
-opnsense_manage: true
+opnsense_firewall_manage: true
+opnsense_dnsmasq_manage: true
 
 opnsense_firewall_rules:
   # docs/network.md: LAN devices need explicit access to view the NVR.
@@ -13,3 +14,13 @@ opnsense_firewall_rules:
     # each) once known, instead of allowing the whole LAN subnet.
     source_net: any
     destination_net: "{{ opnsense_cameras_subnet }}"
+
+opnsense_dnsmasq_ranges:
+  - description: LAN DHCP range
+    interface: LAN
+    start_addr: "{{ opnsense_lan_dhcp_start }}"
+    end_addr: "{{ opnsense_lan_dhcp_end }}"
+  - description: IOT DHCP range
+    interface: IoT
+    start_addr: "{{ opnsense_iot_dhcp_start }}"
+    end_addr: "{{ opnsense_iot_dhcp_end }}"

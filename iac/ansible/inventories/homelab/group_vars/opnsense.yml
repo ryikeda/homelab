@@ -1,15 +1,7 @@
 ---
-opnsense_manage: false
-
+# Shared OPNsense API connection settings, used by every opnsense_* role.
 opnsense_api_port: 443
 opnsense_api_credential_file: "{{ lookup('env', 'HOME') }}/.opnsense/ansible.env"
 # OPNsense's default cert is self-signed until a real one is installed -
 # same reasoning as proxmox_insecure in iac/opentofu.
 opnsense_ssl_verify: false
-
-opnsense_firewall_rules: []
-# - description: Allow LAN to CAMERAS (NVR access)
-#   interface: [lan]
-#   action: pass
-#   source_net: any
-#   destination_net: "{{ opnsense_cameras_subnet }}"

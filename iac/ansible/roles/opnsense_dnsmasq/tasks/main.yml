@@ -1,0 +1,19 @@
+---
+- name: Configure OPNsense DHCP ranges (dnsmasq)
+  when:
+    - opnsense_dnsmasq_manage | bool
+    - opnsense_dnsmasq_ranges | length > 0
+  ansibleguy.opnsense.dnsmasq_range:
+    firewall: "{{ opnsense_host }}"
+    api_port: "{{ opnsense_api_port }}"
+    api_credential_file: "{{ opnsense_api_credential_file }}"
+    ssl_verify: "{{ opnsense_ssl_verify }}"
+    description: "{{ item.description }}"
+    interface: "{{ item.interface }}"
+    start_addr: "{{ item.start_addr }}"
+    end_addr: "{{ item.end_addr }}"
+    lease_time: "{{ item.lease_time | default(86400) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ opnsense_dnsmasq_ranges }}"
+  loop_control:
+    label: "{{ item.description }}"

@@ -1,6 +1,6 @@
 ---
 - name: Configure OPNsense firewall rules
-  when: opnsense_manage | bool
+  when: opnsense_firewall_manage | bool
   block:
     - name: Require at least one firewall rule to manage
       ansible.builtin.assert:
@@ -24,6 +24,9 @@
         destination_port: "{{ item.destination_port | default('') }}"
         protocol: "{{ item.protocol | default('any') }}"
         state: "{{ item.state | default('present') }}"
+        # Required: tells the module which fields identify "this is the same
+        # rule" for idempotency checks. description is our unique key per rule.
+        match_fields: [description]
       loop: "{{ opnsense_firewall_rules }}"
       loop_control:
         label: "{{ item.description }}"

@@ -211,14 +211,14 @@ The storage registration is idempotent (checked against `pvesm status`) and inst
 
 Backup jobs are matched by `id` and, like the VM/LXC templates, only created once — the role won't touch an existing job's schedule/retention/etc. To change one, edit or delete it directly on the host (`pvesh set /cluster/backup/<id> ...` or `pvesh delete /cluster/backup/<id>`) and re-run to recreate it. `guests: all` backs up every VM/container; give it a list of vmids (e.g. `[100, 101]`) to scope it instead. It's off by default and not yet enabled for any host — you'll need your NAS's real IP and export path before turning it on.
 
-## OPNsense firewall configuration
+## OPNsense configuration
 
-`playbooks/opnsense.yml` configures OPNsense itself via its REST API (the `ansibleguy.opnsense` collection), not SSH — OPNsense isn't a Proxmox host, so it's a separate playbook/inventory group (`fw`) from everything above, and tasks run locally on the controller rather than on the target.
+`playbooks/opnsense.yml` configures OPNsense itself via its REST API (the `ansibleguy.opnsense` collection), not SSH — OPNsense isn't a Proxmox host, so it's a separate playbook/inventory group (`fw`) from everything above, and tasks run locally on the controller rather than on the target. Each concern is its own role (`opnsense_firewall`, `opnsense_dnsmasq`, ...), the same one-role-per-concern pattern as the `proxmox_*` roles above, since OPNsense covers several independent subsystems that'll keep growing separately. Shared API connection settings (`opnsense_api_port`, `opnsense_api_credential_file`, `opnsense_ssl_verify`) live once in `inventories/homelab/group_vars/opnsense.yml` rather than duplicated per role.
 
-This role has real prerequisites it cannot do for you — none of this is automatable the way `proxmox_opentofu_user` mints its own token, because there's no existing Ansible foothold on OPNsense until these steps are done by hand:
+Getting to a reachable, automatable OPNsense has real prerequisites none of these roles can do for you — none of this is automatable the way `proxmox_opentofu_user` mints its own token, because there's no existing Ansible foothold on OPNsense until these steps are done by hand:
 
-1. **Install OPNsense** on its own hardware and, via its console, assign interfaces and give each a static address (option 1, then option 2 in the console menu). See `../../docs/network.md` for the full network design and current IP assignments. This role assumes OPNsense is already reachable over HTTPS on its LAN address.
-2. **System → Access → Groups**: create a dedicated group (e.g. `automation`) and grant it only the privileges actually needed for what's being automated (e.g. "Firewall: Rules" for the firewall rules managed below) — not the built-in `admins` group.
+1. **Install OPNsense** on its own hardware and, via its console, assign interfaces and give each a static address (option 1, then option 2 in the console menu). See `../../docs/network.md` for the full network design and current IP assignments. These roles assume OPNsense is already reachable over HTTPS on its LAN address.
+2. **System → Access → Groups**: create a dedicated group (e.g. `automation`) and grant it only the privileges actually needed for what's being automated (e.g. "Firewall: Rules" for `opnsense_firewall`) — not the built-in `admins` group.
 3. **System → Access → Users**: create a user (e.g. `ansible`), assign it to that group, leave shell access disabled — it only ever needs the API key, never a login shell.
 4. On that user's page, generate an **API key** — the key/secret are shown only once, downloaded as a text file.
 5. Save that file outside this repo, e.g. `~/.opnsense/ansible.env`, and lock down its permissions (`chmod 600`). It's already in the exact `key=...` / `secret=...` format the `ansibleguy.opnsense` modules expect via `api_credential_file` — no reformatting needed.
@@ -229,10 +229,12 @@ Then set `opnsense_host` in `inventories/homelab/group_vars/all/local.yml` (see 
 ansible-playbook playbooks/opnsense.yml --diff
 ```
 
-Firewall rules are declared as a list, matched by `description` (like the VM/LXC templates and backup jobs above are matched by name/id):
+### Firewall rules (`opnsense_firewall`)
+
+Declared as a list, matched by `description` (like the VM/LXC templates and backup jobs above are matched by name/id):
 
 ```yaml
-opnsense_manage: true
+opnsense_firewall_manage: true
 opnsense_firewall_rules:
   - description: Allow LAN to CAMERAS (NVR access)
     interface: [lan]
@@ -243,10 +245,31 @@ opnsense_firewall_rules:
 
 Only rules that need to actively *allow* something go here — per `docs/network.md`, OPNsense's default deny-all on every new interface already handles isolation (e.g. CAMERAS/IOT can't reach LAN or WAN) without any explicit block rules.
 
+`ansibleguy.opnsense.rule` requires a `match_fields` argument identifying which fields count as "this is the same rule" for idempotency checks (it's not defaulted upstream, and omitting it fails with a cryptic `'NoneType' object is not iterable`) — the role always passes `match_fields: [description]`, matching how rules are keyed here.
+
+### DHCP ranges (`opnsense_dnsmasq`)
+
+Declared the same way, matched by `description`:
+
+```yaml
+opnsense_dnsmasq_manage: true
+opnsense_dnsmasq_ranges:
+  - description: LAN DHCP range
+    interface: LAN
+    start_addr: "{{ opnsense_lan_dhcp_start }}"
+    end_addr: "{{ opnsense_lan_dhcp_end }}"
+```
+
+This targets **dnsmasq**, not Kea — OPNsense 26.1 defaults new installs' DHCPv4 to dnsmasq (the modern replacement direction for the deprecated ISC `dhcpd`), and the console's DHCP-enable wizard configures dnsmasq accordingly. The collection's `dhcp_subnet`/`dhcp_reservation` modules exist too but target Kea specifically (`API_MOD = 'kea'`) — they won't see or manage a dnsmasq-backed scope. The `dnsmasq_*` modules are labeled "unstable" upstream (less community testing, not "known broken"); switching the actual DHCP backend to Kea just to use the "stable"-labeled modules wasn't judged worth the migration effort for a homelab that doesn't need Kea's failover/DHCPv6-PD features.
+
+Note `dnsmasq_range`'s `interface` field matches by **display name** (`"LAN"`, `"CAMERAS"`, `"IoT"` — whatever each interface's Description field is set to), not the lowercase assignment key (`lan`) that `opnsense_firewall`'s `rule` module uses — these two modules use different conventions for the same underlying interface.
+
+Every run shows a cosmetic diff on `ra_mode` (`[] -> ""`) for each range — a type-normalization quirk in the module for an IPv6 Router Advertisement field none of our (IPv4-only) ranges set. Harmless; not a real change each time.
+
 ### Python interpreter requirement
 
 The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interpreter Ansible normally uses doesn't have it installed, set `opnsense_ansible_python_interpreter` in `local.yml` to one that does — this is deliberately not defaulted in `main.yml`, since a default there would silently take precedence over a `local.yml` override (files in the same `group_vars/all/` directory load in alphabetical order, with later files winning on shared keys — `local.yml` loads before `main.yml`).
 
-### Known issue
+### Not yet automated: interface assignment
 
-Re-running `playbooks/opnsense.yml` against a rule that already exists currently fails with `'NoneType' object is not iterable` from the `ansibleguy.opnsense.rule` module (the first apply works fine; it's the idempotency re-check on a second run that breaks). Not yet root-caused — the rule itself remains correctly applied on OPNsense regardless, this only affects re-running the playbook.
+Renaming/describing a base physical interface (e.g. `OPT1` → `CAMERAS`) or setting its IPv4 address has no supported module in this collection — only virtual interface types (VLAN, bridge, LAGG, etc.) are covered. This stays a manual console/GUI step for now; not worth building on the collection's `raw`/unstable escape hatch for something this foundational to network connectivity.
