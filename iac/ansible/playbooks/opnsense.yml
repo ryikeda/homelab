@@ -1,0 +1,7 @@
+---
+- name: Configure OPNsense
+  hosts: opnsense
+  gather_facts: false
+  become: false
+  roles:
+    - opnsense

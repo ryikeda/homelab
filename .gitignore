@@ -9,6 +9,11 @@ iac/ansible/inventories/homelab/group_vars/all/local.yml
 iac/ansible/.ansible/
 *.retry
 
+# Ansible collection dependencies, installed via:
+#   ansible-galaxy collection install -r collections/requirements.yml -p collections
+# requirements.yml is the source of truth and stays committed.
+iac/ansible/collections/ansible_collections/
+
 # OpenTofu/Terraform runtime artifacts and local state.
 # .terraform.lock.hcl is intentionally NOT ignored; it should be committed.
 iac/opentofu/**/.terraform/

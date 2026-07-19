@@ -1,0 +1,15 @@
+---
+opnsense_manage: true
+
+opnsense_firewall_rules:
+  # docs/network.md: LAN devices need explicit access to view the NVR.
+  # CAMERAS/IOT isolation needs no rules of its own - OPNsense's default
+  # deny-all on new interfaces already blocks everything not listed here.
+  - description: Allow LAN to CAMERAS (NVR access)
+    interface: [lan]
+    action: pass
+    # TODO: harden - source_net is "any" LAN device for now. Narrow this to
+    # an alias of specific trusted devices (with a static IP/DHCP reservation
+    # each) once known, instead of allowing the whole LAN subnet.
+    source_net: any
+    destination_net: "{{ opnsense_cameras_subnet }}"

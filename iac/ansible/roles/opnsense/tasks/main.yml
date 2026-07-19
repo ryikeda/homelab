@@ -1,0 +1,29 @@
+---
+- name: Configure OPNsense firewall rules
+  when: opnsense_manage | bool
+  block:
+    - name: Require at least one firewall rule to manage
+      ansible.builtin.assert:
+        that: opnsense_firewall_rules | length > 0
+        fail_msg: >-
+          opnsense_firewall_rules is empty. Define at least one rule (see
+          docs/network.md's firewall isolation rules) before enabling this role.
+
+    - name: Converge firewall rules
+      ansibleguy.opnsense.rule:
+        firewall: "{{ opnsense_host }}"
+        api_port: "{{ opnsense_api_port }}"
+        api_credential_file: "{{ opnsense_api_credential_file }}"
+        ssl_verify: "{{ opnsense_ssl_verify }}"
+        description: "{{ item.description }}"
+        interface: "{{ item.interface }}"
+        action: "{{ item.action | default('pass') }}"
+        direction: "{{ item.direction | default('in') }}"
+        source_net: "{{ item.source_net | default('any') }}"
+        destination_net: "{{ item.destination_net | default('any') }}"
+        destination_port: "{{ item.destination_port | default('') }}"
+        protocol: "{{ item.protocol | default('any') }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ opnsense_firewall_rules }}"
+      loop_control:
+        label: "{{ item.description }}"

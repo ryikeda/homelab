@@ -210,3 +210,43 @@ proxmox_backup_jobs:
 The storage registration is idempotent (checked against `pvesm status`) and installs `nfs-common` if missing; it also runs `showmount -e` first and just warns (doesn't block) if the export isn't visible, since `pvesm add` will fail loudly on its own if the mount is actually broken. Set `proxmox_backup_manage_nfs_storage: false` if the storage is already registered and you only want this role to manage jobs.
 
 Backup jobs are matched by `id` and, like the VM/LXC templates, only created once — the role won't touch an existing job's schedule/retention/etc. To change one, edit or delete it directly on the host (`pvesh set /cluster/backup/<id> ...` or `pvesh delete /cluster/backup/<id>`) and re-run to recreate it. `guests: all` backs up every VM/container; give it a list of vmids (e.g. `[100, 101]`) to scope it instead. It's off by default and not yet enabled for any host — you'll need your NAS's real IP and export path before turning it on.
+
+## OPNsense firewall configuration
+
+`playbooks/opnsense.yml` configures OPNsense itself via its REST API (the `ansibleguy.opnsense` collection), not SSH — OPNsense isn't a Proxmox host, so it's a separate playbook/inventory group (`fw`) from everything above, and tasks run locally on the controller rather than on the target.
+
+This role has real prerequisites it cannot do for you — none of this is automatable the way `proxmox_opentofu_user` mints its own token, because there's no existing Ansible foothold on OPNsense until these steps are done by hand:
+
+1. **Install OPNsense** on its own hardware and, via its console, assign interfaces and give each a static address (option 1, then option 2 in the console menu). See `../../docs/network.md` for the full network design and current IP assignments. This role assumes OPNsense is already reachable over HTTPS on its LAN address.
+2. **System → Access → Groups**: create a dedicated group (e.g. `automation`) and grant it only the privileges actually needed for what's being automated (e.g. "Firewall: Rules" for the firewall rules managed below) — not the built-in `admins` group.
+3. **System → Access → Users**: create a user (e.g. `ansible`), assign it to that group, leave shell access disabled — it only ever needs the API key, never a login shell.
+4. On that user's page, generate an **API key** — the key/secret are shown only once, downloaded as a text file.
+5. Save that file outside this repo, e.g. `~/.opnsense/ansible.env`, and lock down its permissions (`chmod 600`). It's already in the exact `key=...` / `secret=...` format the `ansibleguy.opnsense` modules expect via `api_credential_file` — no reformatting needed.
+
+Then set `opnsense_host` in `inventories/homelab/group_vars/all/local.yml` (see `local.yml.example`) and run:
+
+```sh
+ansible-playbook playbooks/opnsense.yml --diff
+```
+
+Firewall rules are declared as a list, matched by `description` (like the VM/LXC templates and backup jobs above are matched by name/id):
+
+```yaml
+opnsense_manage: true
+opnsense_firewall_rules:
+  - description: Allow LAN to CAMERAS (NVR access)
+    interface: [lan]
+    action: pass
+    source_net: any
+    destination_net: "{{ opnsense_cameras_subnet }}"
+```
+
+Only rules that need to actively *allow* something go here — per `docs/network.md`, OPNsense's default deny-all on every new interface already handles isolation (e.g. CAMERAS/IOT can't reach LAN or WAN) without any explicit block rules.
+
+### Python interpreter requirement
+
+The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interpreter Ansible normally uses doesn't have it installed, set `opnsense_ansible_python_interpreter` in `local.yml` to one that does — this is deliberately not defaulted in `main.yml`, since a default there would silently take precedence over a `local.yml` override (files in the same `group_vars/all/` directory load in alphabetical order, with later files winning on shared keys — `local.yml` loads before `main.yml`).
+
+### Known issue
+
+Re-running `playbooks/opnsense.yml` against a rule that already exists currently fails with `'NoneType' object is not iterable` from the `ansibleguy.opnsense.rule` module (the first apply works fine; it's the idempotency re-check on a second run that breaks). Not yet root-caused — the rule itself remains correctly applied on OPNsense regardless, this only affects re-running the playbook.
