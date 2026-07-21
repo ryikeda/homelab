@@ -32,3 +32,10 @@ opnsense_unbound_forwards:
   # rules above); this forwards just the internal zone from there.
   - domain: "{{ local_domain }}"
     target: "{{ technitium_host }}"
+  # Blank domain = catch-all: forwards everything else (not matched by a
+  # more specific domain above) to these, instead of Unbound doing full
+  # recursive resolution itself from root servers.
+  - domain: ""
+    target: 1.1.1.1
+  - domain: ""
+    target: 8.8.8.8
