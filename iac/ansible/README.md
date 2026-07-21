@@ -270,6 +270,29 @@ Every run shows a cosmetic diff on `ra_mode` (`[] -> ""`) for each range — a t
 
 The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interpreter Ansible normally uses doesn't have it installed, set `opnsense_ansible_python_interpreter` in `local.yml` to one that does — this is deliberately not defaulted in `main.yml`, since a default there would silently take precedence over a `local.yml` override (files in the same `group_vars/all/` directory load in alphabetical order, with later files winning on shared keys — `local.yml` loads before `main.yml`).
 
-### Not yet automated: interface assignment
+### Not yet automated
 
-Renaming/describing a base physical interface (e.g. `OPT1` → `CAMERAS`) or setting its IPv4 address has no supported module in this collection — only virtual interface types (VLAN, bridge, LAGG, etc.) are covered. This stays a manual console/GUI step for now; not worth building on the collection's `raw`/unstable escape hatch for something this foundational to network connectivity.
+- **Interface assignment.** Renaming/describing a base physical interface (e.g. `OPT1` → `CAMERAS`) or setting its IPv4 address has no supported module in this collection — only virtual interface types (VLAN, bridge, LAGG, etc.) are covered. This stays a manual console/GUI step for now; not worth building on the collection's `raw`/unstable escape hatch for something this foundational to network connectivity.
+- **Alternate Hostnames** (System → Settings → Administration). OPNsense's web GUI has built-in DNS rebind protection - it only trusts requests whose `Host` header is the router's IP or an explicitly allow-listed hostname, so visiting it via a new internal DNS name (e.g. `router.local.ikeda.codes`) shows a rebind-attack warning until that name is added here. No module in this collection covers this settings page (only `system.py`'s reboot/update/upgrade/audit *actions*, not general webgui settings). Left manual since it's only touched when OPNsense's own admin GUI gets a new DNS name - rare, not worth automating.
+
+## Technitium DNS
+
+`playbooks/technitium.yml` installs Technitium DNS Server (via its own official install script - no apt repo) on the VM `iac/opentofu/vm_technitium.tf` provisions at a static IP. See `../../docs/network.md` (not committed - local reference only) for the DNS naming pattern and why this runs as its own VM rather than in k3s.
+
+Like OPNsense, Technitium needs a one-time manual bootstrap before Ansible can touch it: complete its first-run setup (creates the admin user), then generate an **API token** from its web console and save it to `~/.technitium/ansible.env` (plain text, just the token) — same "credential lives outside the repo" pattern as `~/.opnsense/ansible.env` and `~/.proxmox/opentofu.env`.
+
+### Registering DNS records (`playbooks/dns_record.yml`)
+
+Unlike firewall rules/DHCP ranges, DNS records aren't declared as a static per-host list — they're registered per-VM, using whatever IP OpenTofu's guest agent actually discovers (static or DHCP-assigned):
+
+```sh
+ansible-playbook playbooks/dns_record.yml -e dns_name=gpu-box.local.example.com -e dns_ip=192.0.2.163
+```
+
+Each VM resource in `iac/opentofu/` that wants a DNS record calls this automatically via its own `local-exec` provisioner, once its IP is known — e.g. `vm_gpu_box.tf`'s provisioner runs this with its DHCP-assigned address as soon as the VM is created. This makes a new VM's hostname resolvable as part of the same `tofu apply` that creates it, no separate manual step.
+
+This calls Technitium's own REST API directly via `ansible.builtin.uri` — no external collection dependency (deliberately: the community options at the time were either a young/rough Terraform provider from a single maintainer, or an Ansible collection judged not worth the dependency for what's a ~30-line task). `/api/zones/records/add` with `overwrite=true` replaces the entire record set for that name/type, making a single API call idempotent by construction — no need to check for an existing record first. Auth is a plain `Authorization: Bearer <token>` header. Technitium always returns HTTP 200; a logical failure (bad token, invalid zone) only shows up in the JSON body's `status` field, which the playbook checks explicitly.
+
+Two caveats:
+- **Provisioners only fire at creation time.** Adding this provisioner to an already-existing VM's `.tf` file doesn't retroactively register its record — only VMs created (or recreated) after the provisioner was added get it automatically.
+- **`vm_technitium.tf` itself deliberately has no such provisioner** — at that VM's own creation time, Technitium isn't installed yet and no API token exists (same bootstrap chicken-and-egg as OPNsense). Its own record has to be registered manually, once, after the token is minted.

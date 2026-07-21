@@ -1,0 +1,16 @@
+---
+- name: Configure Unbound domain forwards
+  when:
+    - opnsense_unbound_manage | bool
+    - opnsense_unbound_forwards | length > 0
+  ansibleguy.opnsense.unbound_forward:
+    firewall: "{{ opnsense_host }}"
+    api_port: "{{ opnsense_api_port }}"
+    api_credential_file: "{{ opnsense_api_credential_file }}"
+    ssl_verify: "{{ opnsense_ssl_verify }}"
+    domain: "{{ item.domain }}"
+    target: "{{ item.target }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ opnsense_unbound_forwards }}"
+  loop_control:
+    label: "{{ item.domain }}"

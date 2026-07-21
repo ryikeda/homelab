@@ -1,0 +1,20 @@
+---
+# Converges the declared list of known/stable DNS records (technitium_dns_records,
+# see group_vars/all/dns_records.yml). For a single ad-hoc record - e.g. a
+# newly-provisioned VM with a DHCP-assigned IP - use dns_record.yml instead.
+- name: Converge declared DNS records in Technitium
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    technitium_api_token: "{{ lookup('file', lookup('env', 'HOME') + '/.technitium/ansible.env') | trim }}"
+  tasks:
+    - name: Ensure each declared record exists
+      ansible.builtin.include_tasks: ../tasks/technitium_record.yml
+      loop: "{{ technitium_dns_records }}"
+      loop_control:
+        loop_var: record
+        label: "{{ record.name }}"
+      vars:
+        dns_name: "{{ record.name }}"
+        dns_ip: "{{ record.ip }}"

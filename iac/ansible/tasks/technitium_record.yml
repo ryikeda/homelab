@@ -1,0 +1,51 @@
+---
+# Shared by playbooks/dns_record.yml (single, ad-hoc) and
+# playbooks/dns_records.yml (looped over a declared list). Expects
+# dns_name/dns_ip to already be set.
+- name: Require dns_name and dns_ip to be set
+  ansible.builtin.assert:
+    that:
+      - dns_name is defined
+      - dns_ip is defined
+    fail_msg: "dns_name/dns_ip must be set"
+
+# Records can't be added until their zone exists. Tolerate "already exists"
+# so this stays safe to call every time, regardless of which playbook (or
+# how many times) runs first.
+- name: Ensure the local zone exists
+  ansible.builtin.uri:
+    url: "http://{{ technitium_host }}:5380/api/zones/create?zone={{ local_domain | urlencode }}&type=Primary"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ technitium_api_token }}"
+    status_code: 200
+  register: technitium_zone_response
+  failed_when: >-
+    technitium_zone_response.json.status != 'ok' and
+    'already exists' not in (technitium_zone_response.json.errorMessage | default(''))
+
+# overwrite=true replaces the whole A record set for this name, so calling
+# this every time is idempotent by construction - no need to check for an
+# existing record first. No external collection needed, just Technitium's
+# own documented REST API:
+# https://github.com/TechnitiumSoftware/DnsServer/blob/master/APIDOCS.md
+# Technitium's documented examples pass parameters via the query string for
+# this endpoint (even on POST), so build the URL that way rather than as a
+# form-encoded body.
+- name: Ensure the A record exists
+  vars:
+    technitium_query: "domain={{ dns_name | urlencode }}&type=A&ipAddress={{ dns_ip | urlencode }}&ttl=300&overwrite=true"
+  ansible.builtin.uri:
+    url: "http://{{ technitium_host }}:5380/api/zones/records/add?{{ technitium_query }}"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ technitium_api_token }}"
+    status_code: 200
+  register: technitium_response
+
+# Technitium always returns HTTP 200; a logical failure (bad token, invalid
+# zone, etc.) only shows up in the JSON body's "status" field.
+- name: Fail if Technitium reported an error
+  ansible.builtin.assert:
+    that: technitium_response.json.status == 'ok'
+    fail_msg: "{{ technitium_response.json | to_json }}"

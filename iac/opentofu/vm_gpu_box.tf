@@ -1,8 +1,3 @@
-# Step 1 of docs/roadmap.md: a single VM cloned from the ubuntu-2404 template
-# (proxmox_vm_template, vmid 9000), with the GTX 1060 passed through via the
-# gpu0 resource mapping (proxmox_gpu_passthrough). Intended workloads:
-# Jellyfin, Ollama, Docker/Portainer (added in a later step).
-
 resource "proxmox_virtual_environment_file" "gpu_box_vendor_data" {
   content_type = "snippets"
   datastore_id = "local"
@@ -20,8 +15,7 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
 
   clone {
     vm_id = 9000
-    # local-vmstore is plain LVM (not thin-provisioned), which only supports
-    # full clones, not linked clones.
+    # local-vmstore is plain LVM, which only supports full clones.
     full = true
   }
 
@@ -73,6 +67,14 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
         address = "dhcp"
       }
     }
+  }
+
+  # No SSH wait needed here - the module just calls Technitium's API
+  # directly with the guest agent's discovered (DHCP) IP.
+  provisioner "local-exec" {
+    working_dir = "${path.module}/../ansible"
+    command     = "ansible-playbook playbooks/dns_record.yml -e dns_name=gpu-box.${var.local_domain} -e dns_ip=${self.ipv4_addresses[1][0]}"
+    on_failure  = continue
   }
 }
 

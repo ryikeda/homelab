@@ -1,6 +1,7 @@
 ---
 opnsense_firewall_manage: true
 opnsense_dnsmasq_manage: true
+opnsense_unbound_manage: true
 
 opnsense_firewall_rules:
   # docs/network.md: LAN devices need explicit access to view the NVR.
@@ -24,3 +25,10 @@ opnsense_dnsmasq_ranges:
     interface: IoT
     start_addr: "{{ opnsense_iot_dhcp_start }}"
     end_addr: "{{ opnsense_iot_dhcp_end }}"
+
+opnsense_unbound_forwards:
+  # Each interface's DHCP still hands out OPNsense's own gateway IP as the
+  # DNS server (CAMERAS/IOT can't reach Technitium directly - see firewall
+  # rules above); this forwards just the internal zone from there.
+  - domain: "{{ local_domain }}"
+    target: "{{ technitium_host }}"

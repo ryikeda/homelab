@@ -1,0 +1,3 @@
+technitium_ip = "192.0.2.53/24"
+lan_gateway   = "192.0.2.1"
+local_domain  = "local.example.com"

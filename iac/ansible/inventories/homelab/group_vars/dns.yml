@@ -1,0 +1,5 @@
+---
+# Technitium's VM is cloud-init provisioned with the same 'ansible' user +
+# key as everything else OpenTofu creates - see vm_technitium.tf.
+ansible_user: "{{ admin_user_name }}"
+ansible_ssh_private_key_file: "{{ ssh_key_path }}"

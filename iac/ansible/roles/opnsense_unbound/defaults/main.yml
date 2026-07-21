@@ -1,0 +1,6 @@
+---
+opnsense_unbound_manage: false
+
+opnsense_unbound_forwards: []
+# - domain: "{{ local_domain }}"
+#   target: "{{ technitium_host }}"

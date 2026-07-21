@@ -1,0 +1,19 @@
+---
+# Registers/updates a single DNS record in Technitium. Called with:
+#   ansible-playbook playbooks/dns_record.yml -e dns_name=<fqdn> -e dns_ip=<ip>
+# Not tied to a static per-host list - this is invoked per-VM (by an
+# OpenTofu provisioner, using whatever IP the guest agent reports, static
+# or DHCP-assigned) so a new VM's name becomes resolvable as part of its own
+# provisioning, rather than a separate manual step. For known/stable
+# hostnames, see playbooks/dns_records.yml instead.
+- name: Register a DNS record in Technitium
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    # Same "credential lives outside the repo" pattern as ~/.opnsense/ansible.env,
+    # just read directly here since our own uri task needs the token value
+    # itself (no module doing the file-parsing for us).
+    technitium_api_token: "{{ lookup('file', lookup('env', 'HOME') + '/.technitium/ansible.env') | trim }}"
+  tasks:
+    - ansible.builtin.import_tasks: ../tasks/technitium_record.yml

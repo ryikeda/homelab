@@ -14,5 +14,10 @@ opnsense_lan_dhcp_end: 192.0.2.200
 opnsense_iot_dhcp_start: 192.0.2.100
 opnsense_iot_dhcp_end: 192.0.2.200
 
+technitium_host: 192.0.2.53
+# API token itself lives in ~/.technitium/ansible.env, not here.
+
+local_domain: local.example.com
+
 nas_backup_server: 192.0.2.20
 nas_backup_export: /volume1/pve-backups

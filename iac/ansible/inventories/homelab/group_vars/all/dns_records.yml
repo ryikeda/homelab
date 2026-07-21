@@ -1,0 +1,6 @@
+---
+technitium_dns_records:
+  - name: "technitium.{{ local_domain }}"
+    ip: "{{ technitium_host }}"
+  - name: "router.{{ local_domain }}"
+    ip: "{{ opnsense_host }}"

@@ -9,3 +9,18 @@ variable "proxmox_insecure" {
   type        = bool
   default     = true
 }
+
+variable "technitium_ip" {
+  description = "Static IPv4 CIDR address for the Technitium DNS VM (see docs/network.md)."
+  type        = string
+}
+
+variable "lan_gateway" {
+  description = "Gateway address for the LAN network."
+  type        = string
+}
+
+variable "local_domain" {
+  description = "Internal-only DNS domain suffix for locally-registered records (see docs/network.md)."
+  type        = string
+}
