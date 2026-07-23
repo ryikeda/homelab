@@ -1,6 +1,6 @@
 # OpenTofu Homelab IaC
 
-Provisions VMs/containers on Proxmox on top of the host prep done by `iac/ansible/` (storage, GPU passthrough, VM/LXC templates — see `../ansible/README.md` and `../../docs/roadmap.md`).
+Provisions VMs/containers on Proxmox on top of the host prep done by `iac/ansible/` (storage, GPU passthrough, VM/LXC templates — see `../ansible/README.md`).
 
 ## Requirements
 
@@ -32,4 +32,4 @@ State is local (`terraform.tfstate` in this directory) — fine for a single ope
 - `versions.tf` — OpenTofu/provider version constraints.
 - `providers.tf` — the `proxmox` provider block (`insecure = true` by default, since Proxmox's default cert is self-signed; set `proxmox_insecure = false` once a real certificate is installed).
 - `variables.tf` — shared inputs (`pve_node`, `proxmox_insecure`).
-- `main.tf` — currently just a `proxmox_version` data source/output as a connectivity smoke test; will grow into the actual VM/container resources described in `../../docs/roadmap.md`.
+- `main.tf` — currently just a `proxmox_version` data source/output as a connectivity smoke test.

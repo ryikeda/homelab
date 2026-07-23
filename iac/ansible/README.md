@@ -217,7 +217,7 @@ Backup jobs are matched by `id` and, like the VM/LXC templates, only created onc
 
 Getting to a reachable, automatable OPNsense has real prerequisites none of these roles can do for you — none of this is automatable the way `proxmox_opentofu_user` mints its own token, because there's no existing Ansible foothold on OPNsense until these steps are done by hand:
 
-1. **Install OPNsense** on its own hardware and, via its console, assign interfaces and give each a static address (option 1, then option 2 in the console menu). See `../../docs/network.md` for the full network design and current IP assignments. These roles assume OPNsense is already reachable over HTTPS on its LAN address.
+1. **Install OPNsense** on its own hardware and, via its console, assign interfaces and give each a static address (option 1, then option 2 in the console menu), using your own network's IP plan. These roles assume OPNsense is already reachable over HTTPS on its LAN address.
 2. **System → Access → Groups**: create a dedicated group (e.g. `automation`) and grant it only the privileges actually needed for what's being automated (e.g. "Firewall: Rules" for `opnsense_firewall`) — not the built-in `admins` group.
 3. **System → Access → Users**: create a user (e.g. `ansible`), assign it to that group, leave shell access disabled — it only ever needs the API key, never a login shell.
 4. On that user's page, generate an **API key** — the key/secret are shown only once, downloaded as a text file.
@@ -243,7 +243,7 @@ opnsense_firewall_rules:
     destination_net: "{{ opnsense_cameras_subnet }}"
 ```
 
-Only rules that need to actively *allow* something go here — per `docs/network.md`, OPNsense's default deny-all on every new interface already handles isolation (e.g. CAMERAS/IOT can't reach LAN or WAN) without any explicit block rules.
+Only rules that need to actively *allow* something go here — OPNsense's default deny-all on every new interface already handles isolation (e.g. CAMERAS/IOT can't reach LAN or WAN) without any explicit block rules.
 
 `ansibleguy.opnsense.rule` requires a `match_fields` argument identifying which fields count as "this is the same rule" for idempotency checks (it's not defaulted upstream, and omitting it fails with a cryptic `'NoneType' object is not iterable`) — the role always passes `match_fields: [description]`, matching how rules are keyed here.
 
@@ -277,7 +277,7 @@ The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interp
 
 ## Technitium DNS
 
-`playbooks/technitium.yml` installs Technitium DNS Server (via its own official install script - no apt repo) on the VM `iac/opentofu/vm_technitium.tf` provisions at a static IP. See `../../docs/network.md` (not committed - local reference only) for the DNS naming pattern and why this runs as its own VM rather than in k3s.
+`playbooks/technitium.yml` installs Technitium DNS Server (via its own official install script - no apt repo) on the VM `iac/opentofu/vm_technitium.tf` provisions at a static IP. It runs as its own VM rather than in k3s since DNS is foundational infrastructure that shouldn't depend on the cluster that will eventually depend on it.
 
 Like OPNsense, Technitium needs a one-time manual bootstrap before Ansible can touch it: complete its first-run setup (creates the admin user), then generate an **API token** from its web console and save it to `~/.technitium/ansible.env` (plain text, just the token) — same "credential lives outside the repo" pattern as `~/.opnsense/ansible.env` and `~/.proxmox/opentofu.env`.
 
