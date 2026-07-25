@@ -1,0 +1,66 @@
+---
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure the apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker's official GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: "{{ docker_gpg_key_path }}"
+    mode: "0644"
+    force: true
+
+- name: Add the Docker apt repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_facts.distribution_release }}"
+    components: stable
+    architectures: amd64
+    signed_by: "{{ docker_gpg_key_path }}"
+    state: present
+
+- name: Install Docker Engine and plugins
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+    allow_downgrade: true
+
+- name: Hold Docker packages at the pinned version
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: "{{ docker_package_names }}"
+
+- name: Ensure the docker service is enabled and running
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Add the admin user to the docker group
+  ansible.builtin.user:
+    name: "{{ admin_user_name }}"
+    groups: docker
+    append: true
+
+- name: Ensure the docker compose stacks directory exists
+  ansible.builtin.file:
+    path: "{{ docker_stacks_dir }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"

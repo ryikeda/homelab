@@ -20,6 +20,11 @@ variable "traefik_ip" {
   type        = string
 }
 
+variable "gpu_box_ip" {
+  description = "Static IPv4 CIDR address for the GPU workload VM (see docs/network.md)."
+  type        = string
+}
+
 variable "lan_gateway" {
   description = "Gateway address for the LAN network."
   type        = string

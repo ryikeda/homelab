@@ -1,0 +1,95 @@
+---
+# Runs after docker_install (see playbooks/gpu_services.yml) so the "configure
+# the docker runtime" step below has a docker service to restart.
+
+- name: Install ubuntu-drivers-common
+  ansible.builtin.apt:
+    name: ubuntu-drivers-common
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check whether the NVIDIA kernel driver is already loaded
+  ansible.builtin.command: nvidia-smi
+  register: nvidia_smi_check
+  changed_when: false
+  failed_when: false
+
+- name: Install the recommended NVIDIA driver
+  ansible.builtin.command: ubuntu-drivers autoinstall
+  register: nvidia_driver_autoinstall
+  changed_when: "'Nothing to do' not in nvidia_driver_autoinstall.stdout"
+  when: nvidia_smi_check.rc != 0
+
+# ubuntu-drivers installs the kernel module via DKMS - it won't be loaded
+# until the box reboots into it.
+- name: Reboot to load the newly installed NVIDIA driver
+  ansible.builtin.reboot:
+    reboot_timeout: 300
+  when: nvidia_smi_check.rc != 0 and nvidia_driver_autoinstall.changed
+
+- name: Verify the NVIDIA driver is loaded
+  ansible.builtin.command: nvidia-smi
+  register: nvidia_smi_verify
+  changed_when: false
+
+- name: Ensure gnupg is installed
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+
+# NVIDIA doesn't publish a plain deb822-friendly repo - their own docs have
+# you fetch a pre-built .list file and patch in the signed-by clause. Mirrors
+# that exact recipe rather than hand-rolling an equivalent.
+- name: Import the NVIDIA Container Toolkit GPG key
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o {{ nvidia_container_toolkit_keyring }}
+  args:
+    executable: /bin/bash
+    creates: "{{ nvidia_container_toolkit_keyring }}"
+
+- name: Add the NVIDIA Container Toolkit apt repository
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+      | sed 's#deb https://#deb [signed-by={{ nvidia_container_toolkit_keyring }}] https://#g' > {{ nvidia_container_toolkit_list }}
+  args:
+    executable: /bin/bash
+    creates: "{{ nvidia_container_toolkit_list }}"
+
+- name: Install the NVIDIA Container Toolkit
+  ansible.builtin.apt:
+    name: nvidia-container-toolkit
+    state: present
+    update_cache: true
+
+- name: Configure the NVIDIA runtime for Docker
+  ansible.builtin.command: nvidia-ctk runtime configure --runtime=docker
+  register: nvidia_ctk_configure
+  changed_when: "'Wrote' in nvidia_ctk_configure.stdout"
+
+- name: Restart docker to pick up the NVIDIA runtime
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+  when: nvidia_ctk_configure.changed
+
+# `docker run --gpus` resolves through a CDI device spec, not the legacy
+# runtime hook alone - without this file Docker can't find an NVIDIA device
+# to hand out and fails with "AMD CDI spec not found" (it's scanning known
+# vendor kinds and NVIDIA's just isn't registered yet).
+- name: Generate the NVIDIA CDI specification
+  ansible.builtin.command: nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+  args:
+    creates: /etc/cdi/nvidia.yaml
+
+- name: Verify the GPU is visible inside a Docker container
+  # Docker's `--gpus` flag isn't reliable on this Docker version (misroutes
+  # through CDI vendor lookup and fails with "AMD CDI spec not found" even
+  # for an NVIDIA device) - the CDI-qualified --device form is what actually
+  # works. Same syntax to use in compose files: `devices: [nvidia.com/gpu=all]`.
+  ansible.builtin.command: >
+    docker run --rm --device nvidia.com/gpu=all {{ nvidia_smoke_test_image }} nvidia-smi
+  register: nvidia_docker_smi
+  changed_when: false

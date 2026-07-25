@@ -1,6 +1,6 @@
 ---
 - name: Reboot selected hosts
-  hosts: proxmox:linux
+  hosts: proxmox:linux:gpu
   gather_facts: false
   become: true
   roles:

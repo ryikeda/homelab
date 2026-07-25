@@ -10,8 +10,9 @@ resource "proxmox_virtual_environment_file" "gpu_box_vendor_data" {
 }
 
 resource "proxmox_virtual_environment_vm" "gpu_box" {
-  name      = "ubuntu-2404-gpu-box"
+  name      = "gpu-box"
   node_name = var.pve_node
+  tags      = ["ubuntu-2404", "gpu"]
 
   clone {
     vm_id = 9000
@@ -31,17 +32,17 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
   }
 
   cpu {
-    cores = 4
+    cores = 8
   }
 
   memory {
-    dedicated = 8192
+    dedicated = 24576
   }
 
   disk {
     datastore_id = "local-vmstore"
     interface    = "scsi0"
-    size         = 60
+    size         = 150
   }
 
   hostpci {
@@ -64,17 +65,42 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
 
     ip_config {
       ipv4 {
-        address = "dhcp"
+        address = var.gpu_box_ip
+        gateway = var.lan_gateway
       }
     }
   }
 
-  # No SSH wait needed here - the module just calls Technitium's API
-  # directly with the guest agent's discovered (DHCP) IP.
+  # Static IP now (see docs/network.md). Wait for SSH, refresh the
+  # known_hosts entry (cloud-init regenerates the host key on every rebuild,
+  # same as vm_technitium.tf), then converge this VM to a fully running
+  # state in one shot: baseline access, DNS registration, and the
+  # Docker/NVIDIA stack.
   provisioner "local-exec" {
     working_dir = "${path.module}/../ansible"
-    command     = "ansible-playbook playbooks/dns_record.yml -e dns_name=gpu-box.${var.local_domain} -e dns_ip=${self.ipv4_addresses[1][0]}"
-    on_failure  = continue
+    command     = <<-EOT
+      set -e
+      ip="${split("/", var.gpu_box_ip)[0]}"
+      elapsed=0
+      until nc -z -w 2 "$ip" 22 2>/dev/null; do
+        if [ "$elapsed" -ge 300 ]; then
+          echo "Timed out waiting for SSH on $ip" >&2
+          exit 1
+        fi
+        sleep 5
+        elapsed=$((elapsed + 5))
+      done
+      ssh-keygen -R "$ip" 2>/dev/null || true
+      ssh-keyscan -H "$ip" >> ~/.ssh/known_hosts 2>/dev/null
+      ansible-playbook playbooks/bootstrap.yml --limit gpu-box
+      ansible-playbook playbooks/dns_records.yml
+      ansible-playbook playbooks/gpu_services.yml
+    EOT
+
+    # Don't force-recreate the VM just because one of these steps hiccuped -
+    # re-run the relevant ansible-playbook command directly to retry instead
+    # (each is idempotent). Same reasoning as vm_technitium.tf.
+    on_failure = continue
   }
 }
 

@@ -1,6 +1,6 @@
 ---
 - name: Report host health and inventory facts
-  hosts: proxmox:linux:reverse_proxy:dns
+  hosts: proxmox:linux:reverse_proxy:dns:gpu
   gather_facts: true
   become: false
   roles:

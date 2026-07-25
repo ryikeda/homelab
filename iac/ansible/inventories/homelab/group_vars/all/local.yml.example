@@ -5,6 +5,8 @@ admin_user_password_hash: "$6$replace-with-real-hash"
 
 ubuntu_host: 192.0.2.11
 
+gpu_host: 192.0.2.54
+
 opnsense_host: 192.0.2.12
 opnsense_ansible_python_interpreter: /path/to/python3-with-httpx
 

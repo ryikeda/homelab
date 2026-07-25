@@ -8,3 +8,5 @@ technitium_dns_records:
     ip: "{{ traefik_host }}"
   - name: "pve.{{ local_domain }}"
     ip: "{{ traefik_host }}"
+  - name: "gpu-box.{{ local_domain }}"
+    ip: "{{ gpu_host }}"

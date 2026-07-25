@@ -1,0 +1,10 @@
+---
+- name: Install Docker and the NVIDIA stack on the GPU box
+  hosts: gpu
+  gather_facts: true
+  become: true
+  roles:
+    # docker_install first - nvidia_driver_install's runtime-configure step
+    # needs a docker service to restart.
+    - docker_install
+    - nvidia_driver_install

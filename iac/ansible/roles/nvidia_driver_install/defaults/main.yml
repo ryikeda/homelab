@@ -1,0 +1,7 @@
+---
+nvidia_container_toolkit_keyring: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+nvidia_container_toolkit_list: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# Small CUDA base image used only to confirm the GPU is visible inside a
+# container once the toolkit is configured.
+nvidia_smoke_test_image: "nvidia/cuda:12.6.3-base-ubuntu24.04"
