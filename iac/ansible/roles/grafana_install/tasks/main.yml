@@ -1,0 +1,59 @@
+---
+- name: Ensure the admin password is set
+  ansible.builtin.assert:
+    that:
+      - grafana_admin_password | default('') | length > 0
+    fail_msg: >-
+      grafana_admin_password is empty - set a real password in local.yml.
+
+- name: Ensure the Grafana stack directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+  loop:
+    - "{{ grafana_dir }}"
+    - "{{ grafana_dir }}/provisioning/datasources"
+
+# The official image runs as UID 472 (grafana), not root - same reasoning
+# as the Prometheus data directory in prometheus_install.
+- name: Ensure the Grafana data directory exists with the container's UID
+  ansible.builtin.file:
+    path: "{{ grafana_dir }}/data"
+    state: directory
+    owner: "472"
+    group: "472"
+    mode: "0755"
+    recurse: true
+
+- name: Deploy the Prometheus datasource provisioning file
+  ansible.builtin.template:
+    src: prometheus-datasource.yaml.j2
+    dest: "{{ grafana_dir }}/provisioning/datasources/prometheus.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: grafana_datasource_file
+
+- name: Deploy the Grafana compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ grafana_dir }}/compose.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: grafana_compose_file
+
+- name: Start the Grafana stack
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ grafana_dir }}"
+  when: grafana_compose_file.changed
+
+- name: Restart Grafana if only the datasource config changed
+  ansible.builtin.command: docker compose restart
+  args:
+    chdir: "{{ grafana_dir }}"
+  when: grafana_datasource_file.changed and not grafana_compose_file.changed

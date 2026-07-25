@@ -1,23 +1,23 @@
 ---
-- name: Ensure the Dockge stack directory exists
+- name: Ensure the Portainer stack directory exists
   ansible.builtin.file:
-    path: "{{ dockge_dir }}"
+    path: "{{ portainer_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0755"
 
-- name: Deploy the Dockge compose file
+- name: Deploy the Portainer compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ dockge_dir }}/compose.yaml"
+    dest: "{{ portainer_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: dockge_compose_file
+  register: portainer_compose_file
 
-- name: Start the Dockge stack
+- name: Start the Portainer stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ dockge_dir }}"
-  when: dockge_compose_file.changed
+    chdir: "{{ portainer_dir }}"
+  when: portainer_compose_file.changed

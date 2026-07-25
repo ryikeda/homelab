@@ -1,0 +1,54 @@
+---
+- name: Ensure the Prometheus stack directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+  loop:
+    - "{{ prometheus_dir }}"
+    - "{{ prometheus_dir }}/config"
+
+# The official image runs as UID 65534 (nobody), not root - the data dir
+# has to be pre-created owned by that UID or the container can't write its
+# own TSDB/query log into a bind mount Docker would otherwise auto-create
+# as root-owned.
+- name: Ensure the Prometheus data directory exists with the container's UID
+  ansible.builtin.file:
+    path: "{{ prometheus_dir }}/data"
+    state: directory
+    owner: "65534"
+    group: "65534"
+    mode: "0755"
+    recurse: true
+
+- name: Deploy the Prometheus scrape configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_dir }}/config/prometheus.yml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: prometheus_config_file
+
+- name: Deploy the Prometheus compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ prometheus_dir }}/compose.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: prometheus_compose_file
+
+- name: Start the Prometheus stack
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ prometheus_dir }}"
+  when: prometheus_config_file.changed or prometheus_compose_file.changed
+
+- name: Restart Prometheus if only the scrape config changed
+  ansible.builtin.command: docker compose restart
+  args:
+    chdir: "{{ prometheus_dir }}"
+  when: prometheus_config_file.changed and not prometheus_compose_file.changed

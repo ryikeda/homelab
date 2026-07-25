@@ -12,7 +12,8 @@ resource "proxmox_virtual_environment_file" "gpu_box_vendor_data" {
 resource "proxmox_virtual_environment_vm" "gpu_box" {
   name      = "gpu-box"
   node_name = var.pve_node
-  tags      = ["ubuntu-2404", "gpu"]
+  vm_id = 100
+  tags  = ["ubuntu-2404", "gpu"]
 
   clone {
     vm_id = 9000

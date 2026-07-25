@@ -1,0 +1,88 @@
+---
+- name: Create the node_exporter system group
+  ansible.builtin.group:
+    name: "{{ node_exporter_group }}"
+    system: true
+
+- name: Create the node_exporter system user
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Check the currently installed node_exporter version marker
+  ansible.builtin.stat:
+    path: "{{ node_exporter_version_marker }}"
+  register: node_exporter_version_marker_stat
+
+- name: Read the current version marker contents
+  ansible.builtin.slurp:
+    src: "{{ node_exporter_version_marker }}"
+  register: node_exporter_version_marker_contents
+  when: node_exporter_version_marker_stat.stat.exists
+
+- name: Determine whether node_exporter needs to be (re)installed
+  ansible.builtin.set_fact:
+    node_exporter_install_needed: >-
+      {{ not node_exporter_version_marker_stat.stat.exists
+         or (node_exporter_version_marker_contents.content | b64decode | trim) != node_exporter_version }}
+
+- name: Download, extract, and install node_exporter
+  when: node_exporter_install_needed
+  block:
+    - name: Download the node_exporter release archive
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+        mode: "0644"
+
+    - name: Extract the node_exporter binary
+      ansible.builtin.unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /tmp
+        remote_src: true
+        include:
+          - "node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+
+    - name: Install the node_exporter binary
+      ansible.builtin.copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: "{{ node_exporter_binary_path }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Remove downloaded archive/staging files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/node_exporter.tar.gz
+        - "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64"
+
+    - name: Record the installed version marker
+      ansible.builtin.copy:
+        content: "{{ node_exporter_version }}\n"
+        dest: "{{ node_exporter_version_marker }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+- name: Deploy the node_exporter systemd unit
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart node_exporter
+
+- name: Ensure the node_exporter service is enabled and running
+  ansible.builtin.systemd:
+    name: node_exporter
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,16 @@
+services:
+  prometheus:
+    image: prom/prometheus:{{ prometheus_version }}
+    restart: unless-stopped
+    # Host networking - simplest way for Prometheus to reach every
+    # exporter's port across the fleet, and to be reachable at palantir's
+    # own address on 9090 with no extra port mapping.
+    network_mode: host
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time={{ prometheus_retention }}
+      - --web.listen-address=:{{ prometheus_port }}

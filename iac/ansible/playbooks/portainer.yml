@@ -1,0 +1,8 @@
+---
+- name: Install Portainer on its LXC container
+  hosts: portainer
+  gather_facts: true
+  become: true
+  roles:
+    - docker_install
+    - portainer_install

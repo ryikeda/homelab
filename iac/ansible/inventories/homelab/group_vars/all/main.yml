@@ -27,3 +27,8 @@ ssh_generate_local_key: true
 common_packages: []
 maintenance_auto_reboot: false
 maintenance_reboot_timeout_seconds: 300
+
+# Where docker-compose stacks get deployed on any docker_install'd host -
+# gpu-box (dockge/jellyfin/ollama/open_webui) and palantir (prometheus/
+# grafana) both use this.
+docker_stacks_dir: /opt/stacks

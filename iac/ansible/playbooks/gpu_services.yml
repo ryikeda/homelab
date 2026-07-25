@@ -8,7 +8,7 @@
     # needs a docker service to restart.
     - docker_install
     - nvidia_driver_install
-    - dockge_install
+    - portainer_agent_install
     - jellyfin_install
     - ollama_install
     - open_webui_install

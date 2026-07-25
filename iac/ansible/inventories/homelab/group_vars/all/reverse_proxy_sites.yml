@@ -7,11 +7,11 @@ reverse_proxy_sites:
     # trusted cert for clients). Same reasoning as proxmox_insecure in
     # iac/opentofu.
     insecure_skip_verify: true
-  - hostname: "dockge.{{ local_domain }}"
-    upstream: "http://{{ gpu_host }}:5001"
   - hostname: "jellyfin.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:8096"
   - hostname: "ollama.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:11434"
   - hostname: "openwebui.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:8080"
+  - hostname: "portainer.{{ local_domain }}"
+    upstream: "http://{{ portainer_host }}:9000"

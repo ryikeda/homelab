@@ -1,0 +1,14 @@
+services:
+  grafana:
+    image: grafana/grafana:{{ grafana_version }}
+    restart: unless-stopped
+    # Host networking, same as prometheus - simplest way to be reachable at
+    # palantir's own address with no extra port mapping.
+    network_mode: host
+    environment:
+      - GF_SECURITY_ADMIN_USER={{ grafana_admin_user }}
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+      - GF_SERVER_HTTP_PORT={{ grafana_port }}
+    volumes:
+      - ./data:/var/lib/grafana
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro

@@ -25,6 +25,16 @@ variable "gpu_box_ip" {
   type        = string
 }
 
+variable "palantir_ip" {
+  description = "Static IPv4 CIDR address for the Palantir monitoring VM (Prometheus + Grafana, see docs/network.md)."
+  type        = string
+}
+
+variable "portainer_ip" {
+  description = "Static IPv4 CIDR address for the Portainer LXC container (see docs/network.md)."
+  type        = string
+}
+
 variable "lan_gateway" {
   description = "Gateway address for the LAN network."
   type        = string

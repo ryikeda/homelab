@@ -1,0 +1,17 @@
+---
+- name: Install node_exporter fleet-wide
+  hosts: linux:reverse_proxy:dns:gpu:monitoring:container_management
+  gather_facts: true
+  become: true
+  roles:
+    - node_exporter_install
+
+- name: Install Prometheus and Grafana on Palantir
+  hosts: monitoring
+  gather_facts: true
+  become: true
+  roles:
+    - docker_install
+    - portainer_agent_install
+    - prometheus_install
+    - grafana_install

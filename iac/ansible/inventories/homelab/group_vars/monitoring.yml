@@ -1,0 +1,11 @@
+---
+# Palantir is cloud-init provisioned with the same 'ansible' user + key as
+# everything else OpenTofu creates - see vm_palantir.tf.
+ansible_user: "{{ admin_user_name }}"
+ansible_ssh_private_key_file: "{{ ssh_key_path }}"
+
+# Shared between prometheus_install and grafana_install (grafana's
+# datasource needs to know where to reach prometheus) - promoted here
+# rather than left as a prometheus_install role default, same reasoning as
+# docker_stacks_dir/ollama_port on the gpu group.
+prometheus_port: 9090

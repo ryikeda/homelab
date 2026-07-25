@@ -1,7 +1,12 @@
-resource "proxmox_virtual_environment_vm" "technitium" {
-  name      = "technitium"
+# Static IP, same reasoning as Technitium/Traefik - a monitoring box that
+# depends on DHCP working at boot is a bad look for the thing watching
+# whether the rest of the network is healthy.
+
+resource "proxmox_virtual_environment_vm" "palantir" {
+  name      = "palantir"
   node_name = var.pve_node
-  vm_id = 102
+  vm_id = 104
+  tags  = ["ubuntu-2404", "monitoring"]
 
   clone {
     vm_id = 9000
@@ -10,22 +15,21 @@ resource "proxmox_virtual_environment_vm" "technitium" {
   }
 
   cpu {
-    cores = 1
+    cores = 2
+    type  = "host"
   }
 
   memory {
-    dedicated = 1024
-    # Enables the balloon device (range: floating..dedicated) so Proxmox
-    # reports real in-guest usage instead of always showing the full
-    # allocation as "used".
-    floating = 512
+    dedicated = 4096
+    floating  = 1024
   }
 
   disk {
     datastore_id = "local-vmstore"
     interface    = "scsi0"
-    # Disks can only grow, never shrink - the template's disk is already 20G.
-    size = 20
+    # Prometheus's TSDB grows slowly for a handful of scrape targets, but
+    # give it real room to run for years without an early resize.
+    size = 32
   }
 
   agent {
@@ -42,7 +46,7 @@ resource "proxmox_virtual_environment_vm" "technitium" {
 
     ip_config {
       ipv4 {
-        address = var.technitium_ip
+        address = var.palantir_ip
         gateway = var.lan_gateway
       }
     }
@@ -52,7 +56,7 @@ resource "proxmox_virtual_environment_vm" "technitium" {
     working_dir = "${path.module}/../ansible"
     command     = <<-EOT
       set -e
-      ip="${split("/", var.technitium_ip)[0]}"
+      ip="${split("/", var.palantir_ip)[0]}"
       elapsed=0
       until nc -z -w 2 "$ip" 22 2>/dev/null; do
         if [ "$elapsed" -ge 300 ]; then
@@ -62,22 +66,21 @@ resource "proxmox_virtual_environment_vm" "technitium" {
         sleep 5
         elapsed=$((elapsed + 5))
       done
-      # ansible.cfg's host_key_checking can't prompt non-interactively, and
-      # recreating this VM generates a new host key each time - clear any
-      # stale entry and record the current one ourselves.
       ssh-keygen -R "$ip" 2>/dev/null || true
       ssh-keyscan -H "$ip" >> ~/.ssh/known_hosts 2>/dev/null
-      ansible-playbook playbooks/technitium.yml --limit technitium
+      ansible-playbook playbooks/dns_records.yml
+      ansible-playbook playbooks/bootstrap.yml --limit palantir
+      ansible-playbook playbooks/monitoring.yml
     EOT
 
-    # Don't force-recreate the VM just because this step hiccuped - re-run
-    # ansible-playbook directly to retry instead.
+    # Don't force-recreate the VM just because one of these steps hiccuped -
+    # re-run the relevant ansible-playbook command directly to retry instead
+    # (each is idempotent). Same reasoning as vm_gpu_box.tf/vm_technitium.tf.
     on_failure = continue
   }
-
 }
 
-output "technitium_ipv4_addresses" {
+output "palantir_ipv4_addresses" {
   description = "IP addresses reported by the QEMU guest agent once the VM has booted."
-  value       = proxmox_virtual_environment_vm.technitium.ipv4_addresses
+  value       = proxmox_virtual_environment_vm.palantir.ipv4_addresses
 }

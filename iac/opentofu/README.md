@@ -33,3 +33,27 @@ State is local (`terraform.tfstate` in this directory) — fine for a single ope
 - `providers.tf` — the `proxmox` provider block (`insecure = true` by default, since Proxmox's default cert is self-signed; set `proxmox_insecure = false` once a real certificate is installed).
 - `variables.tf` — shared inputs (`pve_node`, `proxmox_insecure`).
 - `main.tf` — currently just a `proxmox_version` data source/output as a connectivity smoke test.
+
+## VMs and containers
+
+Every VM/LXC resource sets an explicit `vm_id` rather than leaving Proxmox to auto-assign one, grouped by range so an ID alone signals what tier something belongs to:
+
+| Range | Purpose |
+|---|---|
+| `100-199` | Core infrastructure — always-up, foundational, not casually rebuilt |
+| `200-299` | Workload VMs — GPU/compute, disposable/rebuildable |
+| `300-399` | Reserved for the future k3s cluster (roadmap step 6) — one contiguous block per cluster |
+| `9000-9099` | VM/LXC templates (`proxmox_vm_template`/`proxmox_lxc_template` Ansible roles) |
+
+Current assignments:
+
+| ID | Resource | File | Type | Purpose |
+|---|---|---|---|---|
+| 100 | gpu-box | `vm_gpu_box.tf` | VM | Docker + NVIDIA GPU passthrough — Jellyfin, Ollama, Open WebUI, Portainer agent |
+| 102 | technitium | `vm_technitium.tf` | VM | Internal DNS |
+| 103 | traefik | `lxc_traefik.tf` | LXC | Reverse proxy, DNS-01 certs |
+| 104 | palantir | `vm_palantir.tf` | VM | Prometheus + Grafana |
+| 105 | portainer | `lxc_portainer.tf` | LXC | Docker fleet management (gpu-box + palantir as Environments) |
+| 9000 | ubuntu-2404 | (Ansible: `proxmox_vm_template`) | VM template | Base image every VM above is cloned from |
+
+`gpu-box` predates this convention and technically belongs in `200-299` by purpose — left at `100` rather than renumbered, since changing a live VM's ID means clone/migrate for no functional benefit. New resources should pick from the ranges above, not auto-assign.

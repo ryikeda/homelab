@@ -1,0 +1,12 @@
+---
+# Declared Prometheus scrape jobs - see roles/prometheus_install. Extend this
+# list as new exporters come online (GPU/cAdvisor on gpu-box, pve-exporter
+# for the Proxmox host, ...).
+prometheus_scrape_targets:
+  - job_name: node
+    targets:
+      - "{{ technitium_host }}:9100"
+      - "{{ traefik_host }}:9100"
+      - "{{ gpu_host }}:9100"
+      - "{{ palantir_host }}:9100"
+      - "{{ portainer_host }}:9100"

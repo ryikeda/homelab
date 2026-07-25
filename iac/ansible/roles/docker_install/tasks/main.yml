@@ -4,6 +4,9 @@
     name:
       - ca-certificates
       - curl
+      # deb822_repository (below) needs this to manage sources - present by
+      # default on the cloud-image VM template, missing on the LXC template.
+      - python3-debian
     state: present
     update_cache: true
     cache_valid_time: 3600
