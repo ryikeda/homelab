@@ -2,6 +2,8 @@ resource "proxmox_virtual_environment_vm" "technitium" {
   name      = "technitium"
   node_name = var.pve_node
   vm_id = 102
+  tags  = ["ubuntu-2404"]
+
 
   clone {
     vm_id = 9000
