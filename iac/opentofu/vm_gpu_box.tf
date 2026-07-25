@@ -33,6 +33,7 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
 
   cpu {
     cores = 8
+    type = "host"
   }
 
   memory {

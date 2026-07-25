@@ -2,5 +2,4 @@
 # Bump deliberately - check https://hub.docker.com/r/ollama/ollama/tags.
 ollama_version: "0.32.3"
 
-ollama_port: 11434
 ollama_dir: "{{ docker_stacks_dir }}/ollama"

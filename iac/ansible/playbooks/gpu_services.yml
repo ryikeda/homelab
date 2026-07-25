@@ -11,3 +11,4 @@
     - dockge_install
     - jellyfin_install
     - ollama_install
+    - open_webui_install

@@ -16,3 +16,5 @@ technitium_dns_records:
     ip: "{{ traefik_host }}"
   - name: "ollama.{{ local_domain }}"
     ip: "{{ traefik_host }}"
+  - name: "openwebui.{{ local_domain }}"
+    ip: "{{ traefik_host }}"

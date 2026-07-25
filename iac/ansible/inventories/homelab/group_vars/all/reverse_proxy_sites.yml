@@ -13,3 +13,5 @@ reverse_proxy_sites:
     upstream: "http://{{ gpu_host }}:8096"
   - hostname: "ollama.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:11434"
+  - hostname: "openwebui.{{ local_domain }}"
+    upstream: "http://{{ gpu_host }}:8080"
