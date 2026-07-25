@@ -35,6 +35,11 @@ resource "proxmox_virtual_environment_vm" "gondor" {
   }
 
   initialization {
+    dns {
+      domain  = var.local_domain
+      servers = [var.lan_gateway]
+    }
+
     vendor_data_file_id = proxmox_virtual_environment_file.gpu_box_vendor_data.id
 
     user_account {
@@ -112,6 +117,11 @@ resource "proxmox_virtual_environment_vm" "rohan" {
   }
 
   initialization {
+    dns {
+      domain  = var.local_domain
+      servers = [var.lan_gateway]
+    }
+
     vendor_data_file_id = proxmox_virtual_environment_file.gpu_box_vendor_data.id
 
     user_account {
@@ -186,6 +196,11 @@ resource "proxmox_virtual_environment_vm" "shire" {
   }
 
   initialization {
+    dns {
+      domain  = var.local_domain
+      servers = [var.lan_gateway]
+    }
+
     vendor_data_file_id = proxmox_virtual_environment_file.gpu_box_vendor_data.id
 
     user_account {

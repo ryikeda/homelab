@@ -39,6 +39,11 @@ resource "proxmox_virtual_environment_container" "portainer" {
   }
 
   initialization {
+    dns {
+      domain  = var.local_domain
+      servers = [var.lan_gateway]
+    }
+
     hostname = "portainer"
 
     user_account {

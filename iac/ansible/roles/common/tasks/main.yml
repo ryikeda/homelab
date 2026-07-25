@@ -9,11 +9,6 @@
     - ansible_facts.os_family == "Debian"
     - (common_packages + (linux_common_packages | default([]))) | length > 0
 
-# Cloud-init only sets the guest hostname once, at first boot - renaming the
-# VM in OpenTofu afterward (Proxmox's own display name) doesn't propagate,
-# so this can silently drift. Keep it converged to the Ansible inventory
-# name instead. Left out for proxmox itself - its hostname predates
-# cloud-init and isn't ours to rename.
 - name: Ensure the guest hostname matches its Ansible inventory name
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
@@ -30,3 +25,29 @@
   when:
     - ansible_facts.os_family == "Debian"
     - "'proxmox' not in group_names"
+
+- name: Ensure the systemd-resolved drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - ansible_facts.os_family == "Debian"
+    - "'proxmox' not in group_names"
+
+- name: Point systemd-resolved at the internal DNS server
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/homelab-dns.conf
+    content: |
+      [Resolve]
+      DNS={{ opnsense_host }}
+      Domains={{ local_domain }}
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - ansible_facts.os_family == "Debian"
+    - "'proxmox' not in group_names"
+  notify: restart systemd-resolved

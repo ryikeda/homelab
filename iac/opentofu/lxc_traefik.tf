@@ -30,6 +30,11 @@ resource "proxmox_virtual_environment_container" "traefik" {
   }
 
   initialization {
+    dns {
+      domain  = var.local_domain
+      servers = [var.lan_gateway]
+    }
+
     hostname = "traefik"
 
     user_account {

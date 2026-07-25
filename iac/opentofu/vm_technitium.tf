@@ -35,6 +35,11 @@ resource "proxmox_virtual_environment_vm" "technitium" {
   }
 
   initialization {
+    dns {
+      domain  = var.local_domain
+      servers = [var.lan_gateway]
+    }
+
     vendor_data_file_id = proxmox_virtual_environment_file.gpu_box_vendor_data.id
 
     user_account {
