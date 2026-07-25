@@ -24,6 +24,8 @@ technitium_dns_records:
     ip: "{{ traefik_host }}"
   - name: "prometheus.{{ local_domain }}"
     ip: "{{ traefik_host }}"
+  - name: "argocd.{{ local_domain }}"
+    ip: "{{ traefik_host }}"
   - name: "gondor.{{ local_domain }}"
     ip: "{{ gondor_host }}"
   - name: "rohan.{{ local_domain }}"

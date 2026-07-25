@@ -1,0 +1,81 @@
+---
+- name: Check the currently installed Helm version marker
+  ansible.builtin.stat:
+    path: "{{ helm_version_marker }}"
+  register: helm_version_marker_stat
+
+- name: Read the current Helm version marker contents
+  ansible.builtin.slurp:
+    src: "{{ helm_version_marker }}"
+  register: helm_version_marker_contents
+  when: helm_version_marker_stat.stat.exists
+
+- name: Determine whether Helm needs to be (re)installed
+  ansible.builtin.set_fact:
+    helm_install_needed: >-
+      {{ not helm_version_marker_stat.stat.exists
+         or (helm_version_marker_contents.content | b64decode | trim) != helm_version }}
+
+- name: Download, extract, and install Helm
+  when: helm_install_needed
+  block:
+    - name: Download the Helm release archive
+      ansible.builtin.get_url:
+        url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+        dest: /tmp/helm.tar.gz
+        mode: "0644"
+
+    - name: Extract the Helm binary
+      ansible.builtin.unarchive:
+        src: /tmp/helm.tar.gz
+        dest: /tmp
+        remote_src: true
+        include:
+          - linux-amd64/helm
+
+    - name: Install the Helm binary
+      ansible.builtin.copy:
+        src: /tmp/linux-amd64/helm
+        dest: "{{ helm_binary_path }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Remove downloaded archive/staging files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/helm.tar.gz
+        - /tmp/linux-amd64
+
+    - name: Record the installed Helm version marker
+      ansible.builtin.copy:
+        content: "{{ helm_version }}\n"
+        dest: "{{ helm_version_marker }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+- name: Add the Argo CD Helm repo
+  ansible.builtin.command: helm repo add argo https://argoproj.github.io/argo-helm
+  register: argocd_helm_repo_add
+  changed_when: "'already exists' not in argocd_helm_repo_add.stdout"
+
+- name: Update the Argo CD Helm repo
+  ansible.builtin.command: helm repo update argo
+  changed_when: true
+
+- name: Install or upgrade the Argo CD Helm release
+  ansible.builtin.command: >-
+    helm upgrade --install argocd argo/argo-cd
+    --namespace {{ argocd_namespace }}
+    --create-namespace
+    --version {{ argocd_chart_version }}
+    --set server.service.type=NodePort
+    --set server.service.nodePortHttps={{ argocd_nodeport_https }}
+    --wait
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  changed_when: true

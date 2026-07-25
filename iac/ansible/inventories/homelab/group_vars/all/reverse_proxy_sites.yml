@@ -19,3 +19,12 @@ reverse_proxy_sites:
     upstream: "http://{{ palantir_host }}:3000"
   - hostname: "prometheus.{{ local_domain }}"
     upstream: "http://{{ palantir_host }}:9090"
+  - hostname: "argocd.{{ local_domain }}"
+    upstream: "https://{{ gondor_host }}:30443"
+    # Argo CD keeps its own self-signed cert on this port - skip verifying
+    # it on the upstream leg, same reasoning as pve.local.ikeda.codes above.
+    # Exposed via a fixed NodePort (roles/argocd_install), not a
+    # LoadBalancer/Ingress controller - reachable via any cluster node's
+    # IP, gondor picked for consistency with the other single-upstream
+    # entries here.
+    insecure_skip_verify: true

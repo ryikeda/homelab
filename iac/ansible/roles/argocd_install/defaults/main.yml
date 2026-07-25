@@ -1,0 +1,15 @@
+---
+# Bump deliberately - check https://github.com/helm/helm/releases.
+helm_version: "4.2.3"
+helm_binary_path: /usr/local/bin/helm
+helm_version_marker: /usr/local/lib/helm-install-version
+
+argocd_namespace: argocd
+
+# Bump deliberately - check https://artifacthub.io/packages/helm/argo/argo-cd
+# for the current chart version and the Argo CD (appVersion) it maps to.
+argocd_chart_version: "10.2.1"
+
+k3s_kubeconfig_path: /etc/rancher/k3s/k3s.yaml
+
+argocd_nodeport_https: 30443

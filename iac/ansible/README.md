@@ -364,7 +364,7 @@ Deployed to `{{ docker_stacks_dir }}/ollama`, port 11434, models persisted at `.
 
 ## k3s cluster: control-plane + 2 workers
 
-`playbooks/k3s_cluster.yml` converges the k3s prod cluster `iac/opentofu/vm_k3s_prod.tf` provisions (static IPs, `300-302`). No Rancher/hub VM - a single cluster, k3s installed directly. Full design rationale (why no Rancher, why multi-node, where Argo CD will run) is in `docs/k3s-cluster-plan.md`; this section is just the "how it's wired" summary.
+`playbooks/k3s_cluster.yml` converges the k3s prod cluster `iac/opentofu/vm_k3s_prod.tf` provisions (static IPs, `300-302`). No Rancher/hub VM - a single cluster, k3s installed directly. Full design rationale (why no Rancher, why multi-node, where Argo CD runs) is in `docs/k3s-cluster-plan.md`; this section is just the "how it's wired" summary.
 
 Tolkien theme, continuing `palantir`'s lead: **`gondor`** is the control-plane, **`rohan`**/**`shire`** are workers - same standalone-name convention as `palantir`/`technitium` (no `k3s-` prefix on the hostnames themselves; the `k3s` inventory group is what ties them together).
 
@@ -391,4 +391,20 @@ Swap `127.0.0.1` in that file for the control-plane's real IP before using it fr
 
 Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/`maintenance` playbooks all include the `kubernetes` group already. Not yet added to `reboot.yml`/`shutdown.yml` (no drain/cordon logic - see docs/k3s-cluster-plan.md's Explicitly deferred section).
 
-Argo CD (in-cluster, GitOps app delivery) is Phase 2 of the plan - not built yet.
+### Argo CD (`argocd_install`)
+
+`playbooks/argocd_install.yml`, run against `prod_control_plane` (`gondor`): installs Helm itself first (version-pinned tarball + version-marker idiom, same as `node_exporter_install`), then `helm upgrade --install`s the `argo/argo-cd` chart into the `argocd` namespace, using `gondor`'s own `/etc/rancher/k3s/k3s.yaml` as `KUBECONFIG` - no external credential needed since it's managing the cluster it runs in ("in-cluster" destination).
+
+```sh
+ansible-playbook playbooks/argocd_install.yml
+```
+
+**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `server.service.type=NodePort` (fixed at `30443`), and `reverse_proxy_sites.yml` points Traefik at `https://{{ gondor_host }}:30443` with `insecure_skip_verify` (Argo CD's own self-signed cert on that port - same pattern as `pve.<local_domain>`'s Proxmox backend). NodePort, not the deferred MetalLB/Ingress-controller work - a fixed port on the cluster's own nodes, not a LoadBalancer implementation.
+
+Login itself stays manual/interactive - the initial admin password:
+
+```sh
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+```
+
+GitOps manifests live at `iac/k8s/` (own README there) - nothing deployed through it yet, no workload decided. `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.
