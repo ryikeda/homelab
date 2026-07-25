@@ -9,6 +9,6 @@ image:
 replicaCount: 1
 
 service:
-  nodePort: 30080
+  nodePort: 30081
 
 domainSecretName: homepage-domain

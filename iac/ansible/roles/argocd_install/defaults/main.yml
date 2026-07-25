@@ -8,4 +8,11 @@ argocd_chart_version: "10.2.1"
 # TODO: revisit once there's more than one or two NodePort services (or once
 # HA actually matters) - MetalLB gives a stable virtual IP instead of tying
 # the Traefik upstream to whichever specific node happens to be listed.
+#
+# Both pinned explicitly - the chart exposes an http port too even though
+# Traefik only ever points at https, and leaving it unset means Kubernetes
+# assigns a random port from the NodePort range, which can silently collide
+# with a fixed port picked for something else later (it did, with
+# homepage's 30080 - see iac/k8s/homepage/values.yaml).
+argocd_nodeport_http: 30080
 argocd_nodeport_https: 30443

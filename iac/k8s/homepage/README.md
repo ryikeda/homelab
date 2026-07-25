@@ -1,6 +1,6 @@
 # homepage
 
-[Homepage](https://gethomepage.dev/) dashboard, deployed as a Helm chart via `../apps/homepage.yaml`. NodePort `30080` (see `values.yaml`), reachable at `homepage.<local_domain>` through the existing Traefik LXC (`reverse_proxy_sites.yml`).
+[Homepage](https://gethomepage.dev/) dashboard, deployed as a Helm chart via `../apps/homepage.yaml`. NodePort `30081` (see `values.yaml`), reachable at `homepage.<local_domain>` through the existing Traefik LXC (`reverse_proxy_sites.yml`).
 
 ## The domain Secret
 

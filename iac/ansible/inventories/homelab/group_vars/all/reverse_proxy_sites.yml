@@ -8,7 +8,7 @@ reverse_proxy_sites:
     # iac/opentofu.
     insecure_skip_verify: true
   - hostname: "homepage.{{ local_domain }}"
-    upstream: "http://{{ gondor_host }}:30080"
+    upstream: "http://{{ gondor_host }}:30081"
   - hostname: "jellyfin.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:8096"
   - hostname: "ollama.{{ local_domain }}"

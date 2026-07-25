@@ -15,6 +15,7 @@
     --create-namespace
     --version {{ argocd_chart_version }}
     --set server.service.type=NodePort
+    --set server.service.nodePortHttp={{ argocd_nodeport_http }}
     --set server.service.nodePortHttps={{ argocd_nodeport_https }}
     --wait
   environment:
