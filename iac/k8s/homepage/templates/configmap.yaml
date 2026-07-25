@@ -6,60 +6,99 @@ metadata:
 data:
   kubernetes.yaml: |
     mode: cluster
+  proxmox.yaml: ""
   settings.yaml: |
+    # For configuration options and examples, please see:
+    # https://gethomepage.dev/latest/configs/settings
+
     title: Homelab
+
+    theme: dark
+    color: slate
+
+    useEqualHeights: true
+
+    layout:
+      Media:
+        header: true
+        style: row
+        columns: 4
+      AI:
+        header: true
+        style: row
+        columns: 4
+      Infrastructure:
+        header: true
+        style: row
+        columns: 4
+      Monitoring:
+        header: true
+        style: row
+        columns: 4
   custom.css: ""
   custom.js: ""
-  bookmarks.yaml: ""
+  bookmarks.yaml: |
+    # For configuration options and examples, please see:
+    # https://gethomepage.dev/latest/configs/bookmarks
   docker.yaml: ""
   services.yaml: |
+    # For configuration options and examples, please see:
+    # https://gethomepage.dev/latest/configs/services
+    # icons found here https://github.com/walkxcode/dashboard-icons
+
     - Media:
         - Jellyfin:
-            href: https://jellyfin.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: jellyfin.svg
+            href: "https://jellyfin.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://jellyfin.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: Media server
     - AI:
         - Open WebUI:
-            href: https://openwebui.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: open-webui.svg
+            href: "https://openwebui.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://openwebui.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: LLM chat UI
         - Ollama:
-            href: https://ollama.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: ollama.svg
+            href: "https://ollama.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://ollama.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: LLM inference API
     - Infrastructure:
         - Proxmox:
-            href: https://pve.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: proxmox.svg
+            href: "https://pve.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://pve.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: Hypervisor
         - Portainer:
-            href: https://portainer.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: portainer.svg
+            href: "https://portainer.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://portainer.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: Docker fleet management
         - Argo CD:
-            href: https://argocd.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: argo-cd.svg
+            href: "https://argocd.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://argocd.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: GitOps for the k3s cluster
     - Monitoring:
         - Grafana:
-            href: https://grafana.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: grafana.svg
+            href: "https://grafana.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://grafana.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: Dashboards
         - Prometheus:
-            href: https://prometheus.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}
+            icon: prometheus.svg
+            href: "https://prometheus.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://prometheus.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: Metrics
   widgets.yaml: |
-    - kubernetes:
-        cluster:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
-          label: "cluster"
-        nodes:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
+    # For configuration options and examples, please see:
+    # https://gethomepage.dev/latest/configs/service-widgets
+
     - resources:
-        backend: resources
-        expanded: true
         cpu: true
         memory: true
-        network: default
+        disk: /
+
     - search:
         provider: duckduckgo
         target: _blank
