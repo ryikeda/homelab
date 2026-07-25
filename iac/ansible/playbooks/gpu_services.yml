@@ -10,3 +10,4 @@
     - nvidia_driver_install
     - dockge_install
     - jellyfin_install
+    - ollama_install

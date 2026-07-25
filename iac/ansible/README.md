@@ -281,21 +281,25 @@ The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interp
 
 Like OPNsense, Technitium needs a one-time manual bootstrap before Ansible can touch it: complete its first-run setup (creates the admin user), then generate an **API token** from its web console and save it to `~/.technitium/ansible.env` (plain text, just the token) — same "credential lives outside the repo" pattern as `~/.opnsense/ansible.env` and `~/.proxmox/opentofu.env`.
 
-### Registering DNS records (`playbooks/dns_record.yml`)
+### Registering DNS records
 
-Unlike firewall rules/DHCP ranges, DNS records aren't declared as a static per-host list — they're registered per-VM, using whatever IP OpenTofu's guest agent actually discovers (static or DHCP-assigned):
+Most hosts now get a static IP (see `docs/network.md`), so their records are declared in `group_vars/all/dns_records.yml` (`technitium_dns_records`, matched by `name` — same list-of-dicts pattern as `reverse_proxy_sites`) and converged with:
+
+```sh
+ansible-playbook playbooks/dns_records.yml
+```
+
+For a genuinely one-off/ad-hoc record instead - e.g. something DHCP-assigned that isn't worth declaring - `playbooks/dns_record.yml` (singular) registers a single record directly:
 
 ```sh
 ansible-playbook playbooks/dns_record.yml -e dns_name=gpu-box.local.example.com -e dns_ip=192.0.2.163
 ```
 
-Each VM resource in `iac/opentofu/` that wants a DNS record calls this automatically via its own `local-exec` provisioner, once its IP is known — e.g. `vm_gpu_box.tf`'s provisioner runs this with its DHCP-assigned address as soon as the VM is created. This makes a new VM's hostname resolvable as part of the same `tofu apply` that creates it, no separate manual step.
+Nothing in `iac/opentofu/` currently calls this automatically via a provisioner - `vm_gpu_box.tf` used to (registering its then-DHCP address at creation time), but it moved to a static IP declared in `dns_records.yml` instead, same as `vm_technitium.tf` and the Traefik LXC. Kept around as a manual escape hatch, not dead code.
 
-This calls Technitium's own REST API directly via `ansible.builtin.uri` — no external collection dependency (deliberately: the community options at the time were either a young/rough Terraform provider from a single maintainer, or an Ansible collection judged not worth the dependency for what's a ~30-line task). `/api/zones/records/add` with `overwrite=true` replaces the entire record set for that name/type, making a single API call idempotent by construction — no need to check for an existing record first. Auth is a plain `Authorization: Bearer <token>` header. Technitium always returns HTTP 200; a logical failure (bad token, invalid zone) only shows up in the JSON body's `status` field, which the playbook checks explicitly.
+Both playbooks share `tasks/technitium_record.yml`, which calls Technitium's own REST API directly via `ansible.builtin.uri` — no external collection dependency (deliberately: the community options at the time were either a young/rough Terraform provider from a single maintainer, or an Ansible collection judged not worth the dependency for what's a ~30-line task). `/api/zones/records/add` with `overwrite=true` replaces the entire record set for that name/type, making a single API call idempotent by construction — no need to check for an existing record first. Auth is a plain `Authorization: Bearer <token>` header. Technitium always returns HTTP 200; a logical failure (bad token, invalid zone) only shows up in the JSON body's `status` field, which the playbook checks explicitly.
 
-Two caveats:
-- **Provisioners only fire at creation time.** Adding this provisioner to an already-existing VM's `.tf` file doesn't retroactively register its record — only VMs created (or recreated) after the provisioner was added get it automatically.
-- **`vm_technitium.tf` itself deliberately has no such provisioner** — at that VM's own creation time, Technitium isn't installed yet and no API token exists (same bootstrap chicken-and-egg as OPNsense). Its own record has to be registered manually, once, after the token is minted.
+**`vm_technitium.tf` itself deliberately has no self-registration provisioner** — at that VM's own creation time, Technitium isn't installed yet and no API token exists (same bootstrap chicken-and-egg as OPNsense). Its own record has to be registered manually, once, after the token is minted.
 
 ## Traefik reverse proxy
 
@@ -305,3 +309,50 @@ Two credentials needed before running the playbook, both kept outside the repo:
 
 - **Cloudflare API token**, scoped to `Zone:DNS:Edit` on your domain's zone only (Cloudflare dashboard → My Profile → API Tokens → Create Token → "Edit zone DNS" template). Save it to `~/.cloudflare/ansible.env` (plain text, just the token) — same pattern as `~/.technitium/ansible.env`.
 - **Dashboard login** (`traefik.<local_domain>`, behind HTTP basic auth): set `traefik_dashboard_user` and `traefik_dashboard_password_hash` in `local.yml`. Generate the hash with `openssl passwd -apr1` — never store the plaintext password anywhere in the repo.
+
+## GPU box: Docker, NVIDIA, Dockge, Jellyfin, Ollama
+
+`playbooks/gpu_services.yml` converges everything on the GPU VM `iac/opentofu/vm_gpu_box.tf` provisions (static IP, `hostpci0` passthrough via the `gpu0` resource mapping): Docker Engine, the NVIDIA driver + container toolkit, then three docker-compose stacks, in that order (each later role depends on the one before it):
+
+```sh
+ansible-playbook playbooks/gpu_services.yml
+ansible-playbook playbooks/dns_records.yml
+ansible-playbook playbooks/traefik.yml
+```
+
+### Docker (`docker_install`)
+
+Installs Docker Engine + Compose plugin from Docker's official apt repo, pinned to exact versions and held afterward (`dpkg_selections`) so `playbooks/updates.yml`'s `apt upgrade: full` can't silently drift them - bump `docker_*_version` in `roles/docker_install/defaults/main.yml` deliberately, checking `https://download.docker.com/linux/ubuntu/dists/noble/stable/binary-amd64/Packages` for current versions. Also creates `docker_stacks_dir` (`/opt/stacks`, declared in `group_vars/gpu.yml`), where every compose-based service below gets deployed - one subdirectory per stack, matching Dockge's own expected layout.
+
+### NVIDIA driver + container toolkit (`nvidia_driver_install`)
+
+Installs the recommended driver via `ubuntu-drivers autoinstall`, rebooting only if a fresh driver actually got installed, then installs `nvidia-container-toolkit` and wires it into Docker's runtime. Runs after `docker_install` since the runtime-configure step needs a docker service to restart.
+
+**Important gotcha, not just for this role but for every compose file below**: on this Docker version, the plain `--gpus all` flag (and the equivalent `deploy.resources.reservations.devices` compose syntax) resolves through Docker's CDI vendor lookup and fails with `Error response from daemon: AMD CDI spec not found` — even for an NVIDIA-only host. The fix is generating an NVIDIA CDI spec (`nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`, this role's last install step) and requesting the GPU by its CDI-qualified name instead. Every compose file in this section uses:
+
+```yaml
+devices:
+  - nvidia.com/gpu=all
+```
+
+not `--gpus`/`deploy.reservations.devices`. The role's own smoke test (`docker run --device nvidia.com/gpu=all ... nvidia-smi`) verifies this works at the end of the run.
+
+### Dockge (`dockge_install`)
+
+A lighter-weight alternative to Portainer - manages `docker-compose.yml` stacks directly rather than wrapping them in a heavier abstraction. Deployed to `{{ docker_stacks_dir }}/dockge`, bind-mounts `docker_stacks_dir` into itself at the same path so it can see/manage every stack including its own, port 5001, `dockge.<local_domain>` via Traefik.
+
+Dockge's whole pitch is editing stacks *through its UI* - since Ansible owns these compose files (templated, git-tracked), treat Dockge as a dashboard/start-stop/log-viewer tool here, not a config editor. Edits made in its UI will get silently overwritten the next time the role runs.
+
+### Jellyfin (`jellyfin_install`)
+
+Media library lives on the NAS, not the VM's own disk - mounted read-only via NFS (`ansible.posix.mount`, `ro,_netdev,nofail`: Jellyfin only ever reads media, and a NAS hiccup at boot shouldn't hang the VM). Export path and mount point are `jellyfin_nas_export`/`jellyfin_nas_mount_point` in `roles/jellyfin_install/defaults/main.yml`; confirm the actual export with `showmount -e <nas-host>` before changing it. Host networking (Jellyfin's own recommendation, needed for LAN auto-discovery), GPU passed through via the CDI syntax above, `jellyfin.<local_domain>` via Traefik.
+
+Two things stay manual, both inherently interactive and not worth scripting for a single-admin homelab:
+1. **First-run setup wizard** - create the admin account, point the first library at `/media`.
+2. **Enable hardware transcoding** - Dashboard → Playback → Transcoding → Hardware acceleration → NVIDIA NVENC. Without this, transcoding falls back to CPU-only.
+
+### Ollama (`ollama_install`)
+
+Deployed to `{{ docker_stacks_dir }}/ollama`, port 11434, models persisted at `./data` (survives container recreation), GPU via the same CDI syntax. Models to keep pulled are declared in `ollama_models` (`group_vars/gpu.yml`, same declared-list pattern as `technitium_dns_records`/`reverse_proxy_sites`) - the role waits for the API to come up, then `POST /api/pull` (`stream: false`, blocking) for each. Idempotent: Ollama checks blobs by digest against what's already in `./data`, so re-running only downloads what's actually missing, not a full re-fetch.
+
+**No authentication on Ollama's API** - anything that can reach `ollama.<local_domain>` can pull models and run inference. Fine on a trusted LAN; don't put this on the public side of Cloudflare Tunnel (roadmap step 7) without an auth layer in front of it.

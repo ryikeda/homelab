@@ -14,3 +14,5 @@ technitium_dns_records:
     ip: "{{ traefik_host }}"
   - name: "jellyfin.{{ local_domain }}"
     ip: "{{ traefik_host }}"
+  - name: "ollama.{{ local_domain }}"
+    ip: "{{ traefik_host }}"

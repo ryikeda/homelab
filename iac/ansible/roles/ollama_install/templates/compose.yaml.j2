@@ -1,0 +1,13 @@
+services:
+  ollama:
+    image: ollama/ollama:{{ ollama_version }}
+    restart: unless-stopped
+    ports:
+      - "{{ ollama_port }}:11434"
+    volumes:
+      - ./data:/root/.ollama
+    # CDI-qualified device request - plain `--gpus`/`deploy.reservations`
+    # syntax doesn't resolve correctly on this Docker version (see
+    # nvidia_driver_install role).
+    devices:
+      - nvidia.com/gpu=all

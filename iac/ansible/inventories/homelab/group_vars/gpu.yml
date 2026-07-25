@@ -5,3 +5,14 @@ ansible_ssh_private_key_file: "{{ ssh_key_path }}"
 # Where Dockge and each service's compose.yaml get deployed - see
 # dockge_install/jellyfin_install/ollama_install.
 docker_stacks_dir: /opt/stacks
+
+# Models to pull automatically once Ollama is up - see ollama_install.
+# GTX 1060 has 6GB VRAM: qwen3.5:9b (~6.6GB) sits right at the edge for max
+# quality, qwen3.5:4b (~3.4GB) is the comfortable default, qwen3.5:2b
+# (~2.7GB) is the fast/small option. Bump/extend deliberately - check
+# https://ollama.com/library/qwen3.5 for current tags/sizes, bigger models
+# spill into system RAM and run much slower.
+ollama_models:
+  - qwen3.5:2b
+  - qwen3.5:4b
+  - qwen3.5:9b

@@ -6,11 +6,15 @@
     update_cache: true
     cache_valid_time: 3600
 
+# Skipped once the NFS export is actually mounted there - it's then a
+# read-only remote filesystem, not a local directory, and re-asserting mode
+# on it fails with EROFS.
 - name: Ensure the NAS mount point exists
   ansible.builtin.file:
     path: "{{ jellyfin_nas_mount_point }}"
     state: directory
     mode: "0755"
+  when: jellyfin_nas_mount_point not in (ansible_facts.mounts | map(attribute='mount') | list)
 
 # Read-only - Jellyfin only ever needs to read media, never write into the
 # NAS share. nofail so a NAS hiccup at boot doesn't hang gpu-box's startup.
