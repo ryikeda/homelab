@@ -9,9 +9,11 @@ This directory manages homelab configuration with Ansible.
 - `playbooks/`: thin orchestration layers that assign roles to groups.
 - `roles/`: reusable configuration and operations logic.
 - `collections/requirements.yml`: Ansible collection dependencies.
+- `pyproject.toml`/`uv.lock`: Python dependencies for running Ansible itself (`ansible-core`, `httpx`) - reproducible via `uv`, not whatever happens to be on the operator's machine.
 
 ## Requirements
 
+- Install [`uv`](https://docs.astral.sh/uv/), then sync the Python environment: `uv sync`
 - Install `sshpass` if bootstrapping with password-based SSH:
   `brew install sshpass`
 - Install collections:
@@ -19,7 +21,7 @@ This directory manages homelab configuration with Ansible.
 
 ## Usage
 
-Run commands from this directory:
+Run commands from this directory, through `uv run` so they use the synced venv (has `ansible-core` and `httpx` - the latter needed by the `ansibleguy.opnsense` modules, which run locally on the controller rather than over SSH - see the OPNsense section below):
 
 Create a local variables file before running playbooks. Ansible loads this automatically from `group_vars`, so no export or wrapper script is needed:
 
@@ -28,18 +30,18 @@ cp inventories/homelab/group_vars/all/local.yml.example inventories/homelab/grou
 ```
 
 ```sh
-ansible-playbook playbooks/bootstrap.yml
-ansible-playbook playbooks/proxmox.yml
-ansible-playbook playbooks/maintenance.yml
-ansible-playbook playbooks/health.yml
+uv run ansible-playbook playbooks/bootstrap.yml
+uv run ansible-playbook playbooks/proxmox.yml
+uv run ansible-playbook playbooks/maintenance.yml
+uv run ansible-playbook playbooks/health.yml
 ```
 
 To run a playbook against a single host, use `--limit` with the inventory host name:
 
 ```sh
-ansible-playbook playbooks/bootstrap.yml --limit pve
-ansible-playbook playbooks/proxmox.yml --limit pve
-ansible-playbook playbooks/health.yml --limit pve
+uv run ansible-playbook playbooks/bootstrap.yml --limit pve
+uv run ansible-playbook playbooks/proxmox.yml --limit pve
+uv run ansible-playbook playbooks/health.yml --limit pve
 ```
 
 For Proxmox hosts, run `bootstrap.yml` first to create the OS admin user, then `proxmox.yml` to register that user in Proxmox and assign its ACL.
@@ -47,8 +49,10 @@ For Proxmox hosts, run `bootstrap.yml` first to create the OS admin user, then `
 After bootstrap, Proxmox hosts connect as the managed `ansible` user with the configured SSH key. For a first-time bootstrap before that user exists, override the connection user at the command line:
 
 ```sh
-ansible-playbook playbooks/bootstrap.yml --limit pve -u root -e ansible_password='your-root-password'
+uv run ansible-playbook playbooks/bootstrap.yml --limit pve -u root -e ansible_password='your-root-password'
 ```
+
+If you'd rather not prefix every command, `source .venv/bin/activate` once per shell session instead.
 
 The default inventory is configured in `ansible.cfg`.
 
@@ -268,7 +272,7 @@ Every run shows a cosmetic diff on `ra_mode` (`[] -> ""`) for each range — a t
 
 ### Python interpreter requirement
 
-The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interpreter Ansible normally uses doesn't have it installed, set `opnsense_ansible_python_interpreter` in `local.yml` to one that does — this is deliberately not defaulted in `main.yml`, since a default there would silently take precedence over a `local.yml` override (files in the same `group_vars/all/` directory load in alphabetical order, with later files winning on shared keys — `local.yml` loads before `main.yml`).
+The `ansibleguy.opnsense` modules need the `httpx` Python package. `router`'s `ansible_connection: local` means those modules execute on the controller rather than over SSH - but local-connection interpreter auto-detection does **not** reliably resolve to whatever's running `ansible-playbook` (verified: it falls back to `/usr/bin/python3`, macOS's bare system Python, which doesn't have `httpx`). `hosts.yml` sets `ansible_python_interpreter: "{{ ansible_playbook_python }}"` for `router` specifically to force it - that magic variable *does* reliably hold the actual running interpreter, which is the `uv`-managed venv's Python as long as commands run via `uv run` (see Requirements above). No machine-specific hardcoded path needed, but `uv run` isn't optional for this host.
 
 ### Not yet automated
 

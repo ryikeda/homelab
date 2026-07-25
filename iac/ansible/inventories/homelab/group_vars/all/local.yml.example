@@ -10,7 +10,6 @@ portainer_host: 192.0.2.56
 grafana_admin_password: "REPLACE_ME"
 
 opnsense_host: 192.0.2.12
-opnsense_ansible_python_interpreter: /path/to/python3-with-httpx
 
 opnsense_cameras_subnet: 192.0.2.0/24
 opnsense_lan_dhcp_start: 192.0.2.100

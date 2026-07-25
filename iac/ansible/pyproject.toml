@@ -1,0 +1,12 @@
+[project]
+name = "homelab-ansible"
+version = "0.1.0"
+description = "Python tooling for this repo's Ansible IaC. Ansible collections are managed separately via ansible-galaxy - see collections/requirements.yml."
+requires-python = ">=3.12"
+dependencies = [
+    "ansible-core>=2.21.2",
+    # Needed by the ansibleguy.opnsense collection's modules, which run
+    # locally on the controller (ansible_connection: local for the router
+    # host) rather than over SSH on a remote target.
+    "httpx>=0.28.1",
+]

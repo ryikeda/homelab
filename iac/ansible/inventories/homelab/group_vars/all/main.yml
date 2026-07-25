@@ -28,6 +28,14 @@ common_packages: []
 maintenance_auto_reboot: false
 maintenance_reboot_timeout_seconds: 300
 
+# Every host is Debian/Ubuntu with python3 at this path - set once here
+# instead of repeated per-host in hosts.yml. Skips Ansible's interpreter
+# auto-detection round-trip and avoids ambiguity. router (opnsense) is the
+# one exception - it overrides this directly in hosts.yml since it needs a
+# specific interpreter with the httpx package for the ansibleguy.opnsense
+# modules, and host-level inventory vars take precedence over this default.
+ansible_python_interpreter: /usr/bin/python3
+
 # Where docker-compose stacks get deployed on any docker_install'd host -
 # gpu-box (dockge/jellyfin/ollama/open_webui) and palantir (prometheus/
 # grafana) both use this.

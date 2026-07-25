@@ -14,6 +14,11 @@ iac/ansible/.ansible/
 # requirements.yml is the source of truth and stays committed.
 iac/ansible/collections/ansible_collections/
 
+# Python tooling venv for running Ansible itself (uv sync). uv.lock IS
+# committed, same reasoning as .terraform.lock.hcl below - reproducible
+# installs, not the runtime environment itself.
+iac/ansible/.venv/
+
 # OpenTofu/Terraform runtime artifacts and local state.
 # .terraform.lock.hcl is intentionally NOT ignored; it should be committed.
 iac/opentofu/**/.terraform/
