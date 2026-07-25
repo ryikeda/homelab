@@ -37,6 +37,10 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
 
   memory {
     dedicated = 24576
+    # Enables the balloon device (range: floating..dedicated) so Proxmox
+    # reports real in-guest usage instead of always showing the full
+    # allocation as "used".
+    floating = 4096
   }
 
   disk {

@@ -17,6 +17,10 @@ resource "proxmox_virtual_environment_vm" "technitium" {
 
   memory {
     dedicated = 1024
+    # Enables the balloon device (range: floating..dedicated) so Proxmox
+    # reports real in-guest usage instead of always showing the full
+    # allocation as "used".
+    floating = 512
   }
 
   disk {
