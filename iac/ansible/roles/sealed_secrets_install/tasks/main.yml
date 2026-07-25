@@ -1,0 +1,20 @@
+---
+- name: Add the Sealed Secrets Helm repo
+  ansible.builtin.command: helm repo add sealed-secrets https://bitnami.github.io/sealed-secrets
+  register: sealed_secrets_helm_repo_add
+  changed_when: "'already exists' not in sealed_secrets_helm_repo_add.stdout"
+
+- name: Update the Sealed Secrets Helm repo
+  ansible.builtin.command: helm repo update sealed-secrets
+  changed_when: true
+
+- name: Install or upgrade the Sealed Secrets Helm release
+  ansible.builtin.command: >-
+    helm upgrade --install sealed-secrets sealed-secrets/sealed-secrets
+    --namespace {{ sealed_secrets_namespace }}
+    --version {{ sealed_secrets_chart_version }}
+    --set-string fullnameOverride={{ sealed_secrets_fullname_override }}
+    --wait
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  changed_when: true

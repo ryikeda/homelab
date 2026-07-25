@@ -393,7 +393,7 @@ Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/
 
 ### Argo CD (`argocd_install`)
 
-`playbooks/argocd_install.yml`, run against `prod_control_plane` (`gondor`): installs Helm itself first (version-pinned tarball + version-marker idiom, same as `node_exporter_install`), then `helm upgrade --install`s the `argo/argo-cd` chart into the `argocd` namespace, using `gondor`'s own `/etc/rancher/k3s/k3s.yaml` as `KUBECONFIG` - no external credential needed since it's managing the cluster it runs in ("in-cluster" destination).
+`playbooks/argocd_install.yml`, run against `prod_control_plane` (`gondor`): `helm_install` first (shared role - version-pinned tarball + version-marker idiom, same as `node_exporter_install`; also used by `sealed_secrets_install` below), then `helm upgrade --install`s the `argo/argo-cd` chart into the `argocd` namespace, using `gondor`'s own `/etc/rancher/k3s/k3s.yaml` (`k3s_kubeconfig_path`, `group_vars/kubernetes.yml`) as `KUBECONFIG` - no external credential needed since it's managing the cluster it runs in ("in-cluster" destination).
 
 ```sh
 ansible-playbook playbooks/argocd_install.yml
@@ -407,4 +407,14 @@ Login itself stays manual/interactive - the initial admin password:
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
 ```
 
-GitOps manifests live at `iac/k8s/` (own README there) - nothing deployed through it yet, no workload decided. `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.
+### Sealed Secrets (`sealed_secrets_install`)
+
+`playbooks/sealed_secrets_install.yml`, run against `prod_control_plane` (`gondor`): same shape as `argocd_install` (`helm_install` first, then `helm upgrade --install`s the `sealed-secrets/sealed-secrets` chart, pinned, into `kube-system`), `--set-string fullnameOverride=sealed-secrets-controller` so the `kubeseal` CLI's own defaults (controller name + namespace) just work without extra flags.
+
+```sh
+ansible-playbook playbooks/sealed_secrets_install.yml
+```
+
+This is how secrets get into `iac/k8s/` despite the repo being public: `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/k8s/homepage/README.md` for a worked example (the `homepage-domain` secret).
+
+GitOps manifests live at `iac/k8s/` (own README there) - first workload deployed is `homepage` (see `iac/k8s/homepage/`). `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.

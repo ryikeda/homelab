@@ -1,0 +1,12 @@
+---
+sealed_secrets_namespace: kube-system
+
+# Bump deliberately - check https://github.com/bitnami/sealed-secrets/releases
+# for the controller version and its matching helm chart version (the chart
+# and controller version numbers differ - see the chart's own release notes).
+sealed_secrets_chart_version: "2.19.1"
+
+# kubeseal (run locally, not by this role) looks for a controller named
+# this, in this namespace, by default - matching those defaults means every
+# `kubeseal` invocation just works without --controller-name/--controller-namespace.
+sealed_secrets_fullname_override: sealed-secrets-controller
