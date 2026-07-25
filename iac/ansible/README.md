@@ -361,3 +361,34 @@ One thing stays manual, inherently interactive and not worth scripting for a sin
 Deployed to `{{ docker_stacks_dir }}/ollama`, port 11434, models persisted at `./data` (survives container recreation), GPU via the same CDI syntax. Models to keep pulled are declared in `ollama_models` (`group_vars/gpu.yml`, same declared-list pattern as `technitium_dns_records`/`reverse_proxy_sites`) - the role waits for the API to come up, then `POST /api/pull` (`stream: false`, blocking) for each. Idempotent: Ollama checks blobs by digest against what's already in `./data`, so re-running only downloads what's actually missing, not a full re-fetch.
 
 **No authentication on Ollama's API** - anything that can reach `ollama.<local_domain>` can pull models and run inference. Fine on a trusted LAN; don't put this on the public side of Cloudflare Tunnel (roadmap step 7) without an auth layer in front of it.
+
+## k3s cluster: control-plane + 2 workers
+
+`playbooks/k3s_cluster.yml` converges the k3s prod cluster `iac/opentofu/vm_k3s_prod.tf` provisions (static IPs, `300-302`). No Rancher/hub VM - a single cluster, k3s installed directly. Full design rationale (why no Rancher, why multi-node, where Argo CD will run) is in `docs/k3s-cluster-plan.md`; this section is just the "how it's wired" summary.
+
+Tolkien theme, continuing `palantir`'s lead: **`gondor`** is the control-plane, **`rohan`**/**`shire`** are workers - same standalone-name convention as `palantir`/`technitium` (no `k3s-` prefix on the hostnames themselves; the `k3s` inventory group is what ties them together).
+
+```sh
+ansible-playbook playbooks/k3s_cluster.yml
+ansible-playbook playbooks/dns_records.yml
+```
+
+### `k3s_install`
+
+One role, two roles-within-the-role depending on group membership (`prod_control_plane` vs `prod_workers`, both children of the `kubernetes` group in `hosts.yml` - named generically so it stays accurate if a future second cluster uses a different distro):
+
+- **Shared prereqs** on every node: swap disabled (`swapoff -a` + stripped from `/etc/fstab`), `overlay`/`br_netfilter` kernel modules loaded and persisted (`/etc/modules-load.d/k3s.conf`), and the sysctls k3s's networking needs (`net.ipv4.ip_forward`, `net.bridge.bridge-nf-call-iptables`/`ip6tables`) via `ansible.posix.sysctl`.
+- **Install**, version-pinned (`k3s_version` in `group_vars/kubernetes.yml`) via the official `get.k3s.io` script, gated by the same "check installed version, only reinstall if it differs" idiom as `node_exporter_install` - `k3s --version`'s output compared against the pinned version rather than a separate marker file. `--disable traefik --disable servicelb` on the server - the existing standalone Traefik LXC stays the one ingress path for this fleet, not k3s's bundled ones.
+- **Join token handoff, in-memory, no separate credential store**: the control-plane play slurps `/var/lib/rancher/k3s/server/node-token` and exposes it as a fact; the workers play (same `ansible-playbook` invocation, control-plane play runs first) reads it via `hostvars[groups['prod_control_plane'][0]]['k3s_node_token']` for `K3S_TOKEN`. `no_log: true` on the agent-install task so the token never lands in output. This only works within a single run - `--limit` on any one node's OpenTofu-triggered convergence always includes the control-plane host (e.g. `gondor:rohan`) so the token fact gets (re-)derived every time, even though installing it is a no-op after the first run.
+
+**Kubeconfig**: not automated - pull it yourself once the control-plane is up:
+
+```sh
+ssh ansible@gondor.<local_domain> sudo cat /etc/rancher/k3s/k3s.yaml
+```
+
+Swap `127.0.0.1` in that file for the control-plane's real IP before using it from your own machine.
+
+Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/`maintenance` playbooks all include the `kubernetes` group already. Not yet added to `reboot.yml`/`shutdown.yml` (no drain/cordon logic - see docs/k3s-cluster-plan.md's Explicitly deferred section).
+
+Argo CD (in-cluster, GitOps app delivery) is Phase 2 of the plan - not built yet.

@@ -35,6 +35,21 @@ variable "portainer_ip" {
   type        = string
 }
 
+variable "gondor_ip" {
+  description = "Static IPv4 CIDR address for the k3s control-plane VM (see docs/k3s-cluster-plan.md)."
+  type        = string
+}
+
+variable "rohan_ip" {
+  description = "Static IPv4 CIDR address for the k3s worker VM 'rohan' (see docs/k3s-cluster-plan.md)."
+  type        = string
+}
+
+variable "shire_ip" {
+  description = "Static IPv4 CIDR address for the k3s worker VM 'shire' (see docs/k3s-cluster-plan.md)."
+  type        = string
+}
+
 variable "lan_gateway" {
   description = "Gateway address for the LAN network."
   type        = string

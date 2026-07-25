@@ -42,7 +42,7 @@ Every VM/LXC resource sets an explicit `vm_id` rather than leaving Proxmox to au
 |---|---|
 | `100-199` | Core infrastructure — always-up, foundational, not casually rebuilt |
 | `200-299` | Workload VMs — GPU/compute, disposable/rebuildable |
-| `300-399` | Reserved for the future k3s cluster (roadmap step 6) — one contiguous block per cluster |
+| `300-399` | k3s cluster (roadmap step 6) — one contiguous block per cluster |
 | `9000-9099` | VM/LXC templates (`proxmox_vm_template`/`proxmox_lxc_template` Ansible roles) |
 
 Current assignments:
@@ -54,6 +54,9 @@ Current assignments:
 | 103 | traefik | `lxc_traefik.tf` | LXC | Reverse proxy, DNS-01 certs |
 | 104 | palantir | `vm_palantir.tf` | VM | Prometheus + Grafana |
 | 105 | portainer | `lxc_portainer.tf` | LXC | Docker fleet management (gpu-box + palantir as Environments) |
+| 300 | gondor | `vm_k3s_prod.tf` | VM | k3s control-plane |
+| 301 | rohan | `vm_k3s_prod.tf` | VM | k3s worker |
+| 302 | shire | `vm_k3s_prod.tf` | VM | k3s worker |
 | 9000 | ubuntu-2404 | (Ansible: `proxmox_vm_template`) | VM template | Base image every VM above is cloned from |
 
 `gpu-box` predates this convention and technically belongs in `200-299` by purpose — left at `100` rather than renumbered, since changing a live VM's ID means clone/migrate for no functional benefit. New resources should pick from the ranges above, not auto-assign.

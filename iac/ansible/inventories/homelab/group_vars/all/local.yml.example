@@ -9,6 +9,11 @@ palantir_host: 192.0.2.55
 portainer_host: 192.0.2.56
 grafana_admin_password: "REPLACE_ME"
 
+# Tolkien theme (k3s cluster) - gondor is control-plane, rohan/shire workers.
+gondor_host: 192.0.2.57
+rohan_host: 192.0.2.58
+shire_host: 192.0.2.59
+
 opnsense_host: 192.0.2.12
 
 opnsense_cameras_subnet: 192.0.2.0/24
