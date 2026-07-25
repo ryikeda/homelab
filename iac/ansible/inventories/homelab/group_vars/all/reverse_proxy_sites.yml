@@ -7,3 +7,5 @@ reverse_proxy_sites:
     # trusted cert for clients). Same reasoning as proxmox_insecure in
     # iac/opentofu.
     insecure_skip_verify: true
+  - hostname: "dockge.{{ local_domain }}"
+    upstream: "http://{{ gpu_host }}:5001"

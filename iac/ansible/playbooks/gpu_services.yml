@@ -8,3 +8,4 @@
     # needs a docker service to restart.
     - docker_install
     - nvidia_driver_install
+    - dockge_install
