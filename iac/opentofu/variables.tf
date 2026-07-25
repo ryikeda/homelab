@@ -15,6 +15,11 @@ variable "technitium_ip" {
   type        = string
 }
 
+variable "traefik_ip" {
+  description = "Static IPv4 CIDR address for the Traefik reverse proxy LXC container (see docs/network.md)."
+  type        = string
+}
+
 variable "lan_gateway" {
   description = "Gateway address for the LAN network."
   type        = string

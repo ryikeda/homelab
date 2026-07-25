@@ -17,6 +17,14 @@ opnsense_iot_dhcp_end: 192.0.2.200
 technitium_host: 192.0.2.53
 # API token itself lives in ~/.technitium/ansible.env, not here.
 
+traefik_host: 192.0.2.52
+traefik_acme_email: admin@example.com
+traefik_dashboard_user: admin
+# Password hash for the Traefik dashboard's basic auth, APR1-MD5 format -
+# generate with: openssl passwd -apr1
+traefik_dashboard_password_hash: "REPLACE_ME"
+# Cloudflare API token itself lives in ~/.cloudflare/ansible.env, not here.
+
 local_domain: local.example.com
 
 nas_backup_server: 192.0.2.20

@@ -1,0 +1,43 @@
+http:
+  routers:
+{% for site in reverse_proxy_sites %}
+    {{ site.hostname | replace('.', '-') }}:
+      rule: "Host(`{{ site.hostname }}`)"
+      entryPoints:
+        - websecure
+      service: {{ site.hostname | replace('.', '-') }}
+      tls:
+        certResolver: cloudflare
+{% endfor %}
+    dashboard:
+      rule: "Host(`traefik.{{ local_domain }}`)"
+      entryPoints:
+        - websecure
+      service: api@internal
+      middlewares:
+        - dashboard-auth
+      tls:
+        certResolver: cloudflare
+
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "{{ traefik_dashboard_user }}:{{ traefik_dashboard_password_hash }}"
+
+  services:
+{% for site in reverse_proxy_sites %}
+    {{ site.hostname | replace('.', '-') }}:
+      loadBalancer:
+        servers:
+          - url: "{{ site.upstream }}"
+{% if site.insecure_skip_verify | default(false) %}
+        serversTransport: insecure-skip-verify
+{% endif %}
+{% endfor %}
+
+{% if reverse_proxy_sites | selectattr('insecure_skip_verify', 'defined') | selectattr('insecure_skip_verify') | list | length > 0 %}
+  serversTransports:
+    insecure-skip-verify:
+      insecureSkipVerify: true
+{% endif %}

@@ -273,7 +273,7 @@ The `ansibleguy.opnsense` modules need the `httpx` Python package. If the interp
 ### Not yet automated
 
 - **Interface assignment.** Renaming/describing a base physical interface (e.g. `OPT1` → `CAMERAS`) or setting its IPv4 address has no supported module in this collection — only virtual interface types (VLAN, bridge, LAGG, etc.) are covered. This stays a manual console/GUI step for now; not worth building on the collection's `raw`/unstable escape hatch for something this foundational to network connectivity.
-- **Alternate Hostnames** (System → Settings → Administration). OPNsense's web GUI has built-in DNS rebind protection - it only trusts requests whose `Host` header is the router's IP or an explicitly allow-listed hostname, so visiting it via a new internal DNS name (e.g. `router.local.ikeda.codes`) shows a rebind-attack warning until that name is added here. No module in this collection covers this settings page (only `system.py`'s reboot/update/upgrade/audit *actions*, not general webgui settings). Left manual since it's only touched when OPNsense's own admin GUI gets a new DNS name - rare, not worth automating.
+- **Alternate Hostnames** (System → Settings → Administration). OPNsense's web GUI has built-in DNS rebind protection - it only trusts requests whose `Host` header is the router's IP or an explicitly allow-listed hostname, so visiting it via a new internal DNS name (e.g. `router.local.example.com`) shows a rebind-attack warning until that name is added here. No module in this collection covers this settings page (only `system.py`'s reboot/update/upgrade/audit *actions*, not general webgui settings). Left manual since it's only touched when OPNsense's own admin GUI gets a new DNS name - rare, not worth automating.
 
 ## Technitium DNS
 
@@ -296,3 +296,12 @@ This calls Technitium's own REST API directly via `ansible.builtin.uri` — no e
 Two caveats:
 - **Provisioners only fire at creation time.** Adding this provisioner to an already-existing VM's `.tf` file doesn't retroactively register its record — only VMs created (or recreated) after the provisioner was added get it automatically.
 - **`vm_technitium.tf` itself deliberately has no such provisioner** — at that VM's own creation time, Technitium isn't installed yet and no API token exists (same bootstrap chicken-and-egg as OPNsense). Its own record has to be registered manually, once, after the token is minted.
+
+## Traefik reverse proxy
+
+`playbooks/traefik.yml` installs Traefik on the LXC container `iac/opentofu/lxc_traefik.tf` provisions. It fronts internal web UIs at clean `*.local.example.com`-style hostnames (see `local_domain`) with real Let's Encrypt certs via Cloudflare DNS-01 — this only requires Cloudflare to be authoritative for the zone, not for the hostname itself to be publicly reachable, so purely-internal names can still get valid, trusted certs. Proxied services are declared in `group_vars/all/reverse_proxy_sites.yml` (same list pattern as `technitium_dns_records`).
+
+Two credentials needed before running the playbook, both kept outside the repo:
+
+- **Cloudflare API token**, scoped to `Zone:DNS:Edit` on your domain's zone only (Cloudflare dashboard → My Profile → API Tokens → Create Token → "Edit zone DNS" template). Save it to `~/.cloudflare/ansible.env` (plain text, just the token) — same pattern as `~/.technitium/ansible.env`.
+- **Dashboard login** (`traefik.<local_domain>`, behind HTTP basic auth): set `traefik_dashboard_user` and `traefik_dashboard_password_hash` in `local.yml`. Generate the hash with `openssl passwd -apr1` — never store the plaintext password anywhere in the repo.

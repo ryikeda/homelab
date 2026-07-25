@@ -1,0 +1,9 @@
+---
+- name: Install and configure Traefik reverse proxy
+  hosts: reverse_proxy
+  gather_facts: true
+  become: true
+  vars:
+    traefik_cloudflare_api_token: "{{ lookup('file', lookup('env', 'HOME') + '/.cloudflare/ansible.env', errors='ignore') | default('', true) | trim }}"
+  roles:
+    - traefik_install

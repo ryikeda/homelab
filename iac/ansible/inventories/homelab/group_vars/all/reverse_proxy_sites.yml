@@ -1,0 +1,9 @@
+---
+reverse_proxy_sites:
+  - hostname: "pve.{{ local_domain }}"
+    upstream: "https://{{ pve_host }}:8006"
+    # Proxmox's web UI serves its own self-signed cert - skip verifying it
+    # on the upstream leg (the reverse proxy still terminates a real,
+    # trusted cert for clients). Same reasoning as proxmox_insecure in
+    # iac/opentofu.
+    insecure_skip_verify: true

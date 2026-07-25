@@ -1,6 +1,6 @@
 ---
 - name: Bootstrap baseline access and common host configuration
-  hosts: proxmox:linux
+  hosts: proxmox:linux:reverse_proxy:dns
   gather_facts: true
   become: true
   roles:

@@ -4,3 +4,7 @@ technitium_dns_records:
     ip: "{{ technitium_host }}"
   - name: "router.{{ local_domain }}"
     ip: "{{ opnsense_host }}"
+  - name: "traefik.{{ local_domain }}"
+    ip: "{{ traefik_host }}"
+  - name: "pve.{{ local_domain }}"
+    ip: "{{ traefik_host }}"
