@@ -1,0 +1,5 @@
+---
+# Bump deliberately - check https://github.com/helm/helm/releases.
+helm_version: "4.2.3"
+helm_binary_path: /usr/local/bin/helm
+helm_version_marker: /usr/local/lib/helm-install-version

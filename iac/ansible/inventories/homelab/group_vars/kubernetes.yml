@@ -6,3 +6,7 @@ ansible_ssh_private_key_file: "{{ ssh_key_path }}"
 # the more conservative/proven line over the current latest (1.36) - see
 # docs/k3s-cluster-plan.md for the reasoning.
 k3s_version: "v1.34.9+k3s1"
+
+# Shared by every Helm-based install run on the control-plane (argocd_install,
+# sealed_secrets_install, ...) as its KUBECONFIG.
+k3s_kubeconfig_path: /etc/rancher/k3s/k3s.yaml
