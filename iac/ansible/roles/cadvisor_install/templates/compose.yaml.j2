@@ -1,0 +1,18 @@
+services:
+  cadvisor:
+    image: ghcr.io/google/cadvisor:{{ cadvisor_version }}
+    restart: unless-stopped
+    ports:
+      - "{{ cadvisor_port }}:8080"
+    # Privileged + these mounts are cAdvisor's own documented requirement -
+    # it needs deep read access to the host's filesystem/cgroups/kernel
+    # messages to report accurate per-container resource usage.
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro

@@ -16,6 +16,8 @@
   loop:
     - "{{ grafana_dir }}"
     - "{{ grafana_dir }}/provisioning/datasources"
+    - "{{ grafana_dir }}/provisioning/dashboards"
+    - "{{ grafana_dir }}/dashboards"
 
 # The official image runs as UID 472 (grafana), not root - same reasoning
 # as the Prometheus data directory in prometheus_install.
@@ -37,6 +39,26 @@
     mode: "0644"
   register: grafana_datasource_file
 
+- name: Deploy the dashboards provider configuration
+  ansible.builtin.template:
+    src: dashboards-provider.yaml.j2
+    dest: "{{ grafana_dir }}/provisioning/dashboards/dashboards.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: grafana_dashboards_provider_file
+
+# Grafana's file provider polls this directory itself (updateIntervalSeconds
+# in dashboards-provider.yaml.j2) - no restart needed for the dashboards
+# themselves, only for the provider config above.
+- name: Deploy the dashboard JSON files
+  ansible.builtin.copy:
+    src: dashboards/
+    dest: "{{ grafana_dir }}/dashboards/"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+
 - name: Deploy the Grafana compose file
   ansible.builtin.template:
     src: compose.yaml.j2
@@ -52,8 +74,10 @@
     chdir: "{{ grafana_dir }}"
   when: grafana_compose_file.changed
 
-- name: Restart Grafana if only the datasource config changed
+- name: Restart Grafana if the datasource or dashboards-provider config changed
   ansible.builtin.command: docker compose restart
   args:
     chdir: "{{ grafana_dir }}"
-  when: grafana_datasource_file.changed and not grafana_compose_file.changed
+  when: >-
+    (grafana_datasource_file.changed or grafana_dashboards_provider_file.changed)
+    and not grafana_compose_file.changed

@@ -1,12 +1,47 @@
 ---
-# Declared Prometheus scrape jobs - see roles/prometheus_install. Extend this
-# list as new exporters come online (GPU/cAdvisor on gpu-box, pve-exporter
-# for the Proxmox host, ...).
+# Declared Prometheus scrape jobs - see roles/prometheus_install. Each entry
+# is real Prometheus scrape_config YAML (dumped as-is by the role's
+# template), not a simplified shape, so anything Prometheus supports -
+# relabel_configs, metrics_path, params, etc. - can be declared directly.
+# Extend this list as new exporters come online.
 prometheus_scrape_targets:
   - job_name: node
-    targets:
-      - "{{ technitium_host }}:9100"
-      - "{{ traefik_host }}:9100"
-      - "{{ gpu_host }}:9100"
-      - "{{ palantir_host }}:9100"
-      - "{{ portainer_host }}:9100"
+    static_configs:
+      - targets:
+          - "{{ technitium_host }}:9100"
+          - "{{ traefik_host }}:9100"
+          - "{{ gpu_host }}:9100"
+          - "{{ palantir_host }}:9100"
+          - "{{ portainer_host }}:9100"
+
+  - job_name: nvidia_gpu
+    static_configs:
+      - targets:
+          - "{{ gpu_host }}:9835"
+
+  - job_name: cadvisor
+    static_configs:
+      - targets:
+          - "{{ gpu_host }}:8081"
+
+  # pve-exporter is a proxying exporter, same pattern as blackbox_exporter -
+  # Prometheus scrapes the exporter's own address, but tells it which real
+  # Proxmox host to query via the target= URL param. The relabel_configs
+  # below do that rewrite: __address__ (the declared target, the real pve
+  # host) becomes the target param, then __address__ gets overwritten to
+  # actually point at the exporter itself.
+  - job_name: pve
+    metrics_path: /pve
+    params:
+      module:
+        - default
+    static_configs:
+      - targets:
+          - "{{ pve_host }}"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: "{{ palantir_host }}:9221"

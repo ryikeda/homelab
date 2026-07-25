@@ -9,6 +9,8 @@
     - docker_install
     - nvidia_driver_install
     - portainer_agent_install
+    - nvidia_gpu_exporter_install
+    - cadvisor_install
     - jellyfin_install
     - ollama_install
     - open_webui_install

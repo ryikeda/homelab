@@ -1,0 +1,16 @@
+apiVersion: 1
+
+providers:
+  - name: default
+    orgId: 1
+    folder: ""
+    type: file
+    # Ansible owns these dashboards (files/dashboards/*.json, git-tracked) -
+    # same "don't edit via the UI, it'll get overwritten" philosophy as
+    # Dockge's compose files. disableDeletion so removing a file here is
+    # what removes the dashboard, not a stray UI click.
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

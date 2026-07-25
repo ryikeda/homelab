@@ -13,5 +13,6 @@
   roles:
     - docker_install
     - portainer_agent_install
+    - pve_exporter_install
     - prometheus_install
     - grafana_install

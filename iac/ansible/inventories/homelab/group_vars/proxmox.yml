@@ -12,3 +12,4 @@ proxmox_admin_user_acl_path: /
 proxmox_admin_user_role: Administrator
 
 opentofu_manage_user: true
+pve_exporter_manage_user: true

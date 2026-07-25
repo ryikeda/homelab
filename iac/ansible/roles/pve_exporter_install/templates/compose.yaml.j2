@@ -1,0 +1,14 @@
+services:
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:{{ pve_exporter_version }}
+    restart: unless-stopped
+    # Host networking - port 9221 matches what's hardcoded in the pve job's
+    # relabel_configs in group_vars/all/prometheus_scrape_targets.yml.
+    network_mode: host
+    environment:
+      - PVE_USER={{ pve_exporter_token_user }}
+      - PVE_TOKEN_NAME={{ pve_exporter_token_name }}
+      - PVE_TOKEN_VALUE={{ pve_exporter_token_value }}
+      # Proxmox's default cert is self-signed - same reasoning as
+      # proxmox_insecure in iac/opentofu.
+      - PVE_VERIFY_SSL=false

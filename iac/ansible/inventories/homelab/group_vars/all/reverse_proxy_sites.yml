@@ -15,3 +15,7 @@ reverse_proxy_sites:
     upstream: "http://{{ gpu_host }}:8080"
   - hostname: "portainer.{{ local_domain }}"
     upstream: "http://{{ portainer_host }}:9000"
+  - hostname: "grafana.{{ local_domain }}"
+    upstream: "http://{{ palantir_host }}:3000"
+  - hostname: "prometheus.{{ local_domain }}"
+    upstream: "http://{{ palantir_host }}:9090"

@@ -1,0 +1,11 @@
+services:
+  nvidia-gpu-exporter:
+    image: utkuozdemir/nvidia_gpu_exporter:{{ nvidia_gpu_exporter_version }}
+    restart: unless-stopped
+    network_mode: host
+    # CDI-qualified device request, same as jellyfin/ollama/open_webui -
+    # gives the container the nvidia-smi binary + libraries it shells out
+    # to for metrics (see nvidia_driver_install for why this syntax, not
+    # --gpus, is required on this Docker version).
+    devices:
+      - nvidia.com/gpu=all

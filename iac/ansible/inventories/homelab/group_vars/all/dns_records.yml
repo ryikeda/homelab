@@ -20,3 +20,7 @@ technitium_dns_records:
     ip: "{{ traefik_host }}"
   - name: "openwebui.{{ local_domain }}"
     ip: "{{ traefik_host }}"
+  - name: "grafana.{{ local_domain }}"
+    ip: "{{ traefik_host }}"
+  - name: "prometheus.{{ local_domain }}"
+    ip: "{{ traefik_host }}"

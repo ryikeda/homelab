@@ -1,0 +1,11 @@
+---
+# Bump deliberately - check https://github.com/google/cadvisor/releases.
+# Image moved from gcr.io/cadvisor/cadvisor to ghcr.io/google/cadvisor as of
+# v0.53.0 - use the ghcr.io location.
+cadvisor_version: "v0.60.5"
+
+cadvisor_dir: "{{ docker_stacks_dir }}/cadvisor"
+# 8080 is already taken by open_webui's host-networked container on
+# gpu-box, so this one stays on bridge networking with an explicit port
+# mapping instead of the host-network pattern used elsewhere on this host.
+cadvisor_port: 8081

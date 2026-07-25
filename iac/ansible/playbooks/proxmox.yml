@@ -11,3 +11,4 @@
     - proxmox_lxc_template
     - proxmox_backup
     - proxmox_opentofu_user
+    - proxmox_pve_exporter_user
