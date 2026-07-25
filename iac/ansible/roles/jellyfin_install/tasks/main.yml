@@ -34,6 +34,29 @@
     group: "{{ admin_user_name }}"
     mode: "0755"
 
+# Nested under config/config/ - that's where Jellyfin itself reads and
+# writes XML settings files (system.xml, encoding.xml, ...) inside the
+# /config volume, one level below the mount point.
+- name: Ensure the Jellyfin nested config directory exists
+  ansible.builtin.file:
+    path: "{{ jellyfin_dir }}/config/config"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+
+# Pre-seeds hardware transcoding settings so the GPU is actually used -
+# without this Jellyfin defaults to HardwareAccelerationType=none and
+# transcodes fall back to CPU-only ffmpeg, silently, with no error anywhere.
+- name: Deploy the Jellyfin hardware acceleration config
+  ansible.builtin.template:
+    src: encoding.xml.j2
+    dest: "{{ jellyfin_dir }}/config/config/encoding.xml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: jellyfin_encoding_config
+
 - name: Deploy the Jellyfin compose file
   ansible.builtin.template:
     src: compose.yaml.j2
@@ -48,3 +71,12 @@
   args:
     chdir: "{{ jellyfin_dir }}"
   when: jellyfin_compose_file.changed
+
+# Jellyfin only reads encoding.xml at startup, not on file change - restart
+# to pick it up. Skipped when `up -d` above already did it (compose file
+# changed too), so a first-ever run doesn't restart the container twice.
+- name: Restart Jellyfin to pick up hardware acceleration config changes
+  ansible.builtin.command: docker compose restart jellyfin
+  args:
+    chdir: "{{ jellyfin_dir }}"
+  when: jellyfin_encoding_config.changed and not jellyfin_compose_file.changed

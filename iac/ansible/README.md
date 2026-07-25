@@ -351,9 +351,10 @@ Dockge's whole pitch is editing stacks *through its UI* - since Ansible owns the
 
 Media library lives on the NAS, not the VM's own disk - mounted read-only via NFS (`ansible.posix.mount`, `ro,_netdev,nofail`: Jellyfin only ever reads media, and a NAS hiccup at boot shouldn't hang the VM). Export path and mount point are `jellyfin_nas_export`/`jellyfin_nas_mount_point` in `roles/jellyfin_install/defaults/main.yml`; confirm the actual export with `showmount -e <nas-host>` before changing it. Host networking (Jellyfin's own recommendation, needed for LAN auto-discovery), GPU passed through via the CDI syntax above, `jellyfin.<local_domain>` via Traefik.
 
-Two things stay manual, both inherently interactive and not worth scripting for a single-admin homelab:
+Hardware transcoding is pre-seeded, not clicked through the UI: the role templates `config/config/encoding.xml` (the file Dashboard → Playback → Transcoding itself writes to) with `HardwareAccelerationType=nvenc` and the codec lists, then restarts the container so it's picked up (Jellyfin only reads it at startup). Tuned for the GTX 1060 in `vm_gpu_box.tf` - Pascal does H.264/HEVC 8-bit both ways, HEVC 10-bit decode only, no AV1 at all - via `jellyfin_hardware_acceleration_type`/`jellyfin_hardware_decoding_codecs`/`jellyfin_allow_hevc_encoding`/`jellyfin_allow_av1_encoding` in `roles/jellyfin_install/defaults/main.yml`. Swap the GPU and these need revisiting.
+
+One thing stays manual, inherently interactive and not worth scripting for a single-admin homelab:
 1. **First-run setup wizard** - create the admin account, point the first library at `/media`.
-2. **Enable hardware transcoding** - Dashboard → Playback → Transcoding → Hardware acceleration → NVIDIA NVENC. Without this, transcoding falls back to CPU-only.
 
 ### Ollama (`ollama_install`)
 

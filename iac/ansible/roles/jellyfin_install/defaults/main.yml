@@ -9,3 +9,20 @@ jellyfin_dir: "{{ docker_stacks_dir }}/jellyfin"
 jellyfin_nas_export: /volume1/jellyfin
 jellyfin_nas_mount_point: /mnt/jellyfin-nas
 jellyfin_media_subpath: media
+
+# Hardware transcoding - pre-seeds config/config/encoding.xml so the GPU is
+# actually used instead of requiring a manual Dashboard > Playback click
+# through. Tuned for a GTX 1060 (Pascal): NVENC/NVDEC support H.264 and
+# HEVC 8-bit both ways, HEVC 10-bit decode only (no 10-bit encode), no AV1
+# at all (Ampere+ for decode, Ada+ for encode) - see
+# https://jellyfin.org/docs/general/post-install/transcoding/hardware-acceleration/nvidia/
+jellyfin_hardware_acceleration_type: nvenc
+jellyfin_hardware_decoding_codecs:
+  - h264
+  - hevc
+  - mpeg2video
+  - vc1
+  - vp8
+  - vp9
+jellyfin_allow_hevc_encoding: true
+jellyfin_allow_av1_encoding: false
