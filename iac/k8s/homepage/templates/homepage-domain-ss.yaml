@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: homepage-domain
+  namespace: homepage
+spec:
+  encryptedData:
+    domain: AgBQsdKE9bXIr9A1iPxacHOg2f0SVfUiE5h3xDuVRGSNc6chUdSWqpB8uTjAZezbXng7bv/N1lWKYxutY0AaVtUpVZmX25TLfRdndorwzUKUj/cUTstlo5UW6Wxi1XrJG99ebl18abJHAIqDX5pkT54iG9H+ucSx2ywlrDDOpeHi0CZRejlDrXN61FHFAUOe5KpdTNa14QMMa1oha7EmkqfjG29ojffbHKzd+gUkt4HVQjPnzRYt42u1hBM19JTT1Z3BcmtHuooUSBeYmtOga8XjT9znGj3hoDHKzOXYdDIaNPgO5S9ksip09b229SwIiKgyvqVQgKq8k0o2V3k8NpSpu25vaWvIWpwdlMElbHAELnHdxRhXvSFF5qmGrG/NzilE5HK5MQKRM+gLscL4XrEhlx2KG/tsSKa9RGvSHWa5Vs+Aydgng4yQaocGULnnKUTAKoNRDEiy6wAZ0GxyDYjIHdaXbrCu8YJAVy9MllvLAbDx9+mUbBo6QH0/a6wCompKDpgNJmhfhCgyPAabR7AYV/6AOs8w8cbFyfAQqIAavykTNqqnpDTcIgY4+1ej4jhObT3aKksEyiO1j1f2NMegULn5wLCywOR4hqkko/xJISBGZlLUw79uzOBZwKfXqV4Z/F+Jgy0q+d8CsNGgGXvx6MJQLccZeTPL8H7mMr2zmnpDC9YEhbGqwMBsI+/GzSrJiRCXY1VYAwolG9SKExlfbA==
+  template:
+    metadata:
+      name: homepage-domain
+      namespace: homepage

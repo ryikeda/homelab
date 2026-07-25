@@ -1,0 +1,14 @@
+# Note what's deliberately NOT here: the actual domain. That comes from a
+# Sealed Secret (see README.md), not a Helm value - this file is committed
+# to a public repo.
+image:
+  repository: ghcr.io/gethomepage/homepage
+  tag: latest
+  pullPolicy: Always
+
+replicaCount: 1
+
+service:
+  nodePort: 30080
+
+domainSecretName: homepage-domain
