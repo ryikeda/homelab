@@ -1,0 +1,46 @@
+---
+- name: Install nfs-common for mounting the NAS media export
+  ansible.builtin.apt:
+    name: nfs-common
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure the NAS mount point exists
+  ansible.builtin.file:
+    path: "{{ jellyfin_nas_mount_point }}"
+    state: directory
+    mode: "0755"
+
+# Read-only - Jellyfin only ever needs to read media, never write into the
+# NAS share. nofail so a NAS hiccup at boot doesn't hang gpu-box's startup.
+- name: Mount the Jellyfin media export from the NAS
+  ansible.posix.mount:
+    path: "{{ jellyfin_nas_mount_point }}"
+    src: "{{ nas_backup_server }}:{{ jellyfin_nas_export }}"
+    fstype: nfs
+    opts: ro,_netdev,nofail
+    state: mounted
+
+- name: Ensure the Jellyfin stack directory exists
+  ansible.builtin.file:
+    path: "{{ jellyfin_dir }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+
+- name: Deploy the Jellyfin compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ jellyfin_dir }}/compose.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: jellyfin_compose_file
+
+- name: Start the Jellyfin stack
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ jellyfin_dir }}"
+  when: jellyfin_compose_file.changed

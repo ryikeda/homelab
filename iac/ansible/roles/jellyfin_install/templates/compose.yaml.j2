@@ -1,0 +1,16 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:{{ jellyfin_version }}
+    restart: unless-stopped
+    # Host networking - Jellyfin's own recommendation, needed for LAN
+    # auto-discovery (DLNA/client discovery) to work correctly.
+    network_mode: host
+    # CDI-qualified device request - plain `--gpus`/`deploy.reservations`
+    # syntax doesn't resolve correctly on this Docker version (see
+    # nvidia_driver_install role).
+    devices:
+      - nvidia.com/gpu=all
+    volumes:
+      - ./config:/config
+      - ./cache:/cache
+      - {{ jellyfin_nas_mount_point }}/{{ jellyfin_media_subpath }}:/media:ro

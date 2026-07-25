@@ -1,0 +1,11 @@
+---
+# Bump deliberately - check https://hub.docker.com/r/jellyfin/jellyfin/tags.
+jellyfin_version: "10.11.11"
+
+jellyfin_dir: "{{ docker_stacks_dir }}/jellyfin"
+
+# Media lives on the NAS, not the VM's own disk - same physical NAS as the
+# Proxmox backup target (nas_backup_server), different share.
+jellyfin_nas_export: /volume1/jellyfin
+jellyfin_nas_mount_point: /mnt/jellyfin-nas
+jellyfin_media_subpath: media

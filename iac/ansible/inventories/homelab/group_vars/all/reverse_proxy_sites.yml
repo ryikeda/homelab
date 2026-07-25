@@ -9,3 +9,5 @@ reverse_proxy_sites:
     insecure_skip_verify: true
   - hostname: "dockge.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:5001"
+  - hostname: "jellyfin.{{ local_domain }}"
+    upstream: "http://{{ gpu_host }}:8096"

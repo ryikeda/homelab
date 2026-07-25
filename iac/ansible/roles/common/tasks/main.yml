@@ -8,3 +8,25 @@
   when:
     - ansible_facts.os_family == "Debian"
     - (common_packages + (linux_common_packages | default([]))) | length > 0
+
+# Cloud-init only sets the guest hostname once, at first boot - renaming the
+# VM in OpenTofu afterward (Proxmox's own display name) doesn't propagate,
+# so this can silently drift. Keep it converged to the Ansible inventory
+# name instead. Left out for proxmox itself - its hostname predates
+# cloud-init and isn't ours to rename.
+- name: Ensure the guest hostname matches its Ansible inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  when:
+    - ansible_facts.os_family == "Debian"
+    - "'proxmox' not in group_names"
+
+- name: Ensure /etc/hosts resolves the hostname locally
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s'
+    line: "127.0.1.1\t{{ inventory_hostname }}"
+    state: present
+  when:
+    - ansible_facts.os_family == "Debian"
+    - "'proxmox' not in group_names"
