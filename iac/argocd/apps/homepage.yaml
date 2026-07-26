@@ -1,18 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: homelab
+  name: homepage
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/ryikeda/homelab.git
     targetRevision: main
-    path: iac/k8s/apps
-    directory:
-      recurse: true
+    path: iac/argocd/homepage
   destination:
     server: https://kubernetes.default.svc
+    namespace: homepage
   syncPolicy:
     automated:
       prune: true

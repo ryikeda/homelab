@@ -1,10 +1,10 @@
-# k8s manifests
+# Argo CD manifests
 
 GitOps manifests for the k3s cluster (`gondor`/`rohan`/`shire`), reconciled by Argo CD running in-cluster (`iac/ansible/playbooks/argocd_install.yml`). See `docs/k3s-cluster-plan.md` for the full cluster design.
 
 Argo CD's destination for everything here is `in-cluster` - it's managing the same cluster it runs in, no external kubeconfig/Secret needed. Repo is public, so Argo CD pulls it over plain HTTPS - no deploy key/credentials to manage.
 
-`root.yaml` is the one-time bootstrap - applied once by hand (`kubectl apply -f iac/k8s/root.yaml`), it's an `Application` that watches `apps/` and auto-applies whatever shows up there (`syncPolicy.automated`, `prune`/`selfHeal` on). Everything after that first apply is pure GitOps.
+`root.yaml` is the one-time bootstrap - applied once by hand (`kubectl apply -f iac/argocd/root.yaml`), it's an `Application` that watches `apps/` and auto-applies whatever shows up there (`syncPolicy.automated`, `prune`/`selfHeal` on). Everything after that first apply is pure GitOps.
 
 ## Adding a workload
 
