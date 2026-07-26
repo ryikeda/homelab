@@ -1,0 +1,11 @@
+---
+extends: default
+
+ignore: |
+  **/templates/
+
+rules:
+  line-length:
+    max: 160
+  braces:
+    max-spaces-inside: 1

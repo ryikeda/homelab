@@ -5,8 +5,8 @@
 resource "proxmox_virtual_environment_vm" "palantir" {
   name      = "palantir"
   node_name = var.pve_node
-  vm_id = 104
-  tags  = ["ubuntu-2404"]
+  vm_id     = 104
+  tags      = ["ubuntu-2404"]
 
   clone {
     vm_id = 9000

@@ -23,6 +23,10 @@ tofu apply
 
 If that token file is missing or lost, re-run `ansible-playbook playbooks/proxmox.yml --limit pve` from `iac/ansible/` with a new `opentofu_token_name` to mint a replacement (see that role's README section).
 
+## Linting
+
+`.github/workflows/ci.yml` runs `tofu fmt -check -recursive` and `tofu validate` on every PR/push - format and internal-consistency checks only, no `plan`/`apply` (that needs real Proxmox credentials CI doesn't have). Run the same checks locally with `tofu fmt -recursive` and `tofu validate` (needs `tofu init -backend=false` first if `.terraform/` isn't already there).
+
 ## State
 
 State is local (`terraform.tfstate` in this directory) — fine for a single operator. It's gitignored, along with `.terraform/` and any `*.tfvars`. `.terraform.lock.hcl` **is** committed, so provider version resolution stays reproducible.

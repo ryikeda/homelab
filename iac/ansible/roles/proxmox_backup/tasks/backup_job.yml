@@ -1,5 +1,5 @@
 ---
-- name: "{{ backup_job.id }}: determine whether the backup job already exists"
+- name: "Determine whether the backup job already exists: {{ backup_job.id }}"
   ansible.builtin.set_fact:
     proxmox_backup_job_entry: >-
       {{
@@ -8,7 +8,7 @@
         | list
       }}
 
-- name: "{{ backup_job.id }}: create the backup job"
+- name: "Create the backup job: {{ backup_job.id }}"
   ansible.builtin.command:
     argv: >-
       {{
@@ -25,7 +25,7 @@
   when: proxmox_backup_job_entry | length == 0
   changed_when: true
 
-- name: "{{ backup_job.id }}: report backup job status"
+- name: "Report backup job status: {{ backup_job.id }}"
   ansible.builtin.debug:
     msg: >-
       Backup job '{{ backup_job.id }}' ({{ backup_job.schedule }} -> {{ backup_job.storage }})

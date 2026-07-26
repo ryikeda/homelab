@@ -34,7 +34,8 @@
   block:
     - name: Download the node_exporter release archive
       ansible.builtin.get_url:
-        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{
+          node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
         dest: /tmp/node_exporter.tar.gz
         mode: "0644"
 
@@ -78,7 +79,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart node_exporter
+  notify: Restart node_exporter
 
 - name: Ensure the node_exporter service is enabled and running
   ansible.builtin.systemd:
