@@ -1,0 +1,13 @@
+---
+- name: Install Docker and the shared database/storage stack on Rivendell
+  hosts: storage
+  gather_facts: true
+  become: true
+  roles:
+    - docker_install
+    - portainer_agent_install
+    - cadvisor_install
+    - postgres_install
+    - mongodb_install
+    - seaweedfs_install
+    - cloudbeaver_install

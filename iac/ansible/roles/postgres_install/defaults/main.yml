@@ -1,0 +1,12 @@
+---
+postgres_install_dir: "{{ docker_stacks_dir }}/postgres"
+
+# Bump deliberately - check https://hub.docker.com/_/postgres for the
+# current version.
+postgres_install_version: "17.2"
+postgres_install_port: 5432
+
+# Bump deliberately - check
+# https://github.com/prometheus-community/postgres_exporter/releases.
+postgres_install_exporter_version: "v0.15.0"
+postgres_install_exporter_port: 9187

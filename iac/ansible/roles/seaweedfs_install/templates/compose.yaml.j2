@@ -1,0 +1,23 @@
+# "server -s3" runs master+volume+filer+S3 gateway in one process - the
+# simplest topology for a single-node deployment. Master/volume ports
+# stay internal (nothing outside this container needs them); only the S3
+# API, the filer's admin UI, and metrics are published.
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:{{ seaweedfs_install_version }}
+    restart: unless-stopped
+    command: >-
+      server -s3
+      -s3.config=/etc/seaweedfs/s3.json
+      -s3.port={{ seaweedfs_install_s3_port }}
+      -dir=/data
+      -filer.port={{ seaweedfs_install_filer_port }}
+      -metricsPort={{ seaweedfs_install_metrics_port }}
+      -ip.bind=0.0.0.0
+    ports:
+      - "{{ seaweedfs_install_s3_port }}:{{ seaweedfs_install_s3_port }}"
+      - "{{ seaweedfs_install_filer_port }}:{{ seaweedfs_install_filer_port }}"
+      - "{{ seaweedfs_install_metrics_port }}:{{ seaweedfs_install_metrics_port }}"
+    volumes:
+      - ./data:/data
+      - ./s3.json:/etc/seaweedfs/s3.json:ro

@@ -12,14 +12,18 @@ traefik_install_reverse_proxy_sites:
     upstream: "http://{{ gpu_host }}:8096"
   - hostname: "ollama.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:11434"
-  - hostname: "openwebui.{{ local_domain }}"
-    upstream: "http://{{ gpu_host }}:8080"
   - hostname: "portainer.{{ local_domain }}"
     upstream: "http://{{ portainer_host }}:9000"
   - hostname: "grafana.{{ local_domain }}"
     upstream: "http://{{ palantir_host }}:3000"
   - hostname: "prometheus.{{ local_domain }}"
     upstream: "http://{{ palantir_host }}:9090"
+  - hostname: "cloudbeaver.{{ local_domain }}"
+    upstream: "http://{{ rivendell_host }}:8978"
+    basic_auth: true
+  - hostname: "seaweedfs.{{ local_domain }}"
+    upstream: "http://{{ rivendell_host }}:8888"
+    basic_auth: true
 
   # --- k8s workloads - all share the same upstream: the in-cluster Traefik
   # ingress controller's MetalLB IP (iac/argocd/apps/ingress-controller.yaml).
@@ -28,11 +32,15 @@ traefik_install_reverse_proxy_sites:
   # subdomain prefix - see iac/argocd/homepage/templates/ingressroute.yaml
   # and roles/argocd_install/files/argocd-ingressroute.yaml). Adding a new
   # k8s workload never needs a new entry here - only new ones exposed
-  # outside the cluster, like these two, do. ---
+  # outside the cluster, like these, do. ---
   - hostname: "homepage.{{ local_domain }}"
     upstream: "http://{{ k8s_ingress_lb_ip }}"
   - hostname: "argocd.{{ local_domain }}"
     # Argo CD serves plain HTTP internally (server.insecure=true, see
     # roles/argocd_install) - this LXC already terminates real TLS at the
     # edge, so there's no self-signed backend leg to skip-verify anymore.
+    upstream: "http://{{ k8s_ingress_lb_ip }}"
+  - hostname: "cronicle.{{ local_domain }}"
+    upstream: "http://{{ k8s_ingress_lb_ip }}"
+  - hostname: "openwebui.{{ local_domain }}"
     upstream: "http://{{ k8s_ingress_lb_ip }}"

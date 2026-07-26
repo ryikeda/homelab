@@ -1,0 +1,23 @@
+# Not host networking (unlike the GPU box's services) - no GPU-simplicity
+# reason for it here. postgres-exporter reaches postgres by service name
+# over the default Compose network, no special networking needed.
+services:
+  postgres:
+    image: postgres:{{ postgres_install_version }}
+    restart: unless-stopped
+    ports:
+      - "{{ postgres_install_port }}:5432"
+    environment:
+      - POSTGRES_PASSWORD={{ postgres_install_password }}
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:{{ postgres_install_exporter_version }}
+    restart: unless-stopped
+    ports:
+      - "{{ postgres_install_exporter_port }}:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:{{ postgres_install_password }}@postgres:5432/postgres?sslmode=disable
+    depends_on:
+      - postgres

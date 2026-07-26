@@ -1,0 +1,24 @@
+# Not host networking - see roles/postgres_install/templates/compose.yaml.j2
+# for the same reasoning. mongodb-exporter reaches mongodb by service
+# name over the default Compose network.
+services:
+  mongodb:
+    image: mongo:{{ mongodb_install_version }}
+    restart: unless-stopped
+    ports:
+      - "{{ mongodb_install_port }}:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME={{ mongodb_install_root_user }}
+      - MONGO_INITDB_ROOT_PASSWORD={{ mongodb_install_password }}
+    volumes:
+      - ./data:/data/db
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:{{ mongodb_install_exporter_version }}
+    restart: unless-stopped
+    command:
+      - --mongodb.uri=mongodb://{{ mongodb_install_root_user }}:{{ mongodb_install_password }}@mongodb:27017
+    ports:
+      - "{{ mongodb_install_exporter_port }}:9216"
+    depends_on:
+      - mongodb

@@ -6,6 +6,10 @@ http:
       entryPoints:
         - websecure
       service: {{ site.hostname | replace('.', '-') }}
+{% if site.basic_auth | default(false) %}
+      middlewares:
+        - dashboard-auth
+{% endif %}
       tls:
         certResolver: cloudflare
 {% endfor %}
@@ -20,6 +24,10 @@ http:
         certResolver: cloudflare
 
   middlewares:
+    # Named for its original use (the Traefik dashboard itself), also
+    # reused via `basic_auth: true` for any reverse_proxy_sites.yml entry
+    # that needs to sit behind auth (e.g. CloudBeaver/SeaweedFS's filer UI -
+    # full DB/bucket access, not something to leave open on the LAN alone).
     dashboard-auth:
       basicAuth:
         users:

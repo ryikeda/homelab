@@ -1,0 +1,40 @@
+# Fully stateless: no PVC. OLLAMA_BASE_URL/DATABASE_URL/S3 storage env
+# vars all come from configSecretName (see README.md) - Postgres and
+# SeaweedFS (on rivendell) handle persistence instead of local disk, and
+# Ollama itself stays on gpu_host (GPU passthrough ties it there, not
+# part of this cluster) so this is a cross-host LAN call.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openwebui
+  namespace: {{ .Release.Namespace }}
+spec:
+  revisionHistoryLimit: 3
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openwebui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: openwebui
+    spec:
+      containers:
+        - name: openwebui
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.configSecretName }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15

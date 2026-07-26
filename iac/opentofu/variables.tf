@@ -30,6 +30,11 @@ variable "palantir_ip" {
   type        = string
 }
 
+variable "rivendell_ip" {
+  description = "Static IPv4 CIDR address for the Rivendell storage VM (Postgres/MongoDB/SeaweedFS/CloudBeaver, see docs/network.md)."
+  type        = string
+}
+
 variable "portainer_ip" {
   description = "Static IPv4 CIDR address for the Portainer LXC container (see docs/network.md)."
   type        = string

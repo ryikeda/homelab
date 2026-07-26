@@ -1,0 +1,15 @@
+# Reaches postgres/mongodb via rivendell_host's published ports (not
+# service-name DNS - those are separate Compose projects, no shared
+# network), same way any other LAN client would.
+services:
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:{{ cloudbeaver_install_version }}
+    restart: unless-stopped
+    ports:
+      - "{{ cloudbeaver_install_port }}:8978"
+    environment:
+      - CB_SERVER_NAME=rivendell
+      - CB_ADMIN_NAME=admin
+      - CB_ADMIN_PASSWORD={{ cloudbeaver_install_admin_password }}
+    volumes:
+      - ./data:/opt/cloudbeaver/workspace

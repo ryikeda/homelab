@@ -1,0 +1,23 @@
+---
+- name: Ensure the CloudBeaver stack directory exists
+  ansible.builtin.file:
+    path: "{{ cloudbeaver_install_dir }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+
+- name: Deploy the CloudBeaver compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ cloudbeaver_install_dir }}/compose.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: cloudbeaver_install_compose_file
+
+- name: Start the CloudBeaver stack
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ cloudbeaver_install_dir }}"
+  when: cloudbeaver_install_compose_file.changed

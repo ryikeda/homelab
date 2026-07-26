@@ -1,0 +1,16 @@
+# ClusterIP - routed to from the LAN via the in-cluster Traefik ingress
+# controller (see templates/ingressroute.yaml), not exposed directly.
+apiVersion: v1
+kind: Service
+metadata:
+  name: openwebui
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: openwebui

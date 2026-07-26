@@ -1,0 +1,41 @@
+# Non-secret half of Cronicle's config.json - the S3 endpoint/credentials
+# (secret half) come from a Sealed Secret via envFrom, and the init
+# container in deployment.yaml merges both into the real config.json
+# Cronicle reads at startup. Field names here are Cronicle's documented
+# config keys as of this chart's authoring - verify against
+# https://github.com/jhuckaby/Cronicle/blob/master/conf/config.json
+# (their own sample config) before first deploy, same "verify against
+# upstream" spirit as every version-pin comment in iac/ansible.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cronicle-config
+  namespace: {{ .Release.Namespace }}
+data:
+  config.json.template: |
+    {
+      "base_app_url": "http://cronicle.internal",
+      "base_data_url": "http://cronicle.internal/api/data",
+      "web_direct_connect": true,
+      "WebServer": {
+        "http_port": 3012,
+        "http_htdocs_dir": "htdocs"
+      },
+      "Storage": {
+        "engine": "S3",
+        "AWS": {
+          "endpoint": "${S3_ENDPOINT}",
+          "s3ForcePathStyle": true,
+          "credentials": {
+            "accessKeyId": "${S3_ACCESS_KEY}",
+            "secretAccessKey": "${S3_SECRET_KEY}"
+          }
+        },
+        "S3": {
+          "keyPrefix": "{{ .Values.storage.keyPrefix }}",
+          "params": {
+            "Bucket": "{{ .Values.storage.bucket }}"
+          }
+        }
+      }
+    }

@@ -14,6 +14,14 @@ gondor_host: 192.0.2.57
 rohan_host: 192.0.2.58
 shire_host: 192.0.2.59
 
+rivendell_host: 192.0.2.61
+
+postgres_install_password: "REPLACE_ME"
+mongodb_install_password: "REPLACE_ME"
+seaweedfs_install_s3_access_key: admin
+seaweedfs_install_s3_secret_key: "REPLACE_ME"
+cloudbeaver_install_admin_password: "REPLACE_ME"
+
 opnsense_host: 192.0.2.12
 
 opnsense_cameras_subnet: 192.0.2.0/24

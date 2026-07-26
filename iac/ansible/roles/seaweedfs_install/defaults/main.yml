@@ -1,0 +1,9 @@
+---
+seaweedfs_install_dir: "{{ docker_stacks_dir }}/seaweedfs"
+
+# Bump deliberately - check https://github.com/seaweedfs/seaweedfs/releases
+# for the current version.
+seaweedfs_install_version: "4.40"
+seaweedfs_install_s3_port: 8333
+seaweedfs_install_filer_port: 8888
+seaweedfs_install_metrics_port: 9327

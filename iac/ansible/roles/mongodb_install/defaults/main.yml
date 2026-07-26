@@ -1,0 +1,13 @@
+---
+mongodb_install_dir: "{{ docker_stacks_dir }}/mongodb"
+
+# Bump deliberately - check https://hub.docker.com/_/mongo for the
+# current version.
+mongodb_install_version: "8.0.4"
+mongodb_install_port: 27017
+mongodb_install_root_user: admin
+
+# Bump deliberately - check
+# https://github.com/percona/mongodb_exporter/releases.
+mongodb_install_exporter_version: "0.44.0"
+mongodb_install_exporter_port: 9216
