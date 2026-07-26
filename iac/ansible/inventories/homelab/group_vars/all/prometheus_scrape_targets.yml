@@ -16,6 +16,7 @@ prometheus_install_scrape_targets:
           - "{{ gondor_host }}:9100"
           - "{{ rohan_host }}:9100"
           - "{{ shire_host }}:9100"
+          - "{{ rivendell_host }}:9100"
 
   - job_name: nvidia_gpu
     static_configs:
@@ -26,6 +27,24 @@ prometheus_install_scrape_targets:
     static_configs:
       - targets:
           - "{{ gpu_host }}:8081"
+          - "{{ rivendell_host }}:8081"
+
+  - job_name: postgres
+    static_configs:
+      - targets:
+          - "{{ rivendell_host }}:9187"
+
+  - job_name: mongodb
+    static_configs:
+      - targets:
+          - "{{ rivendell_host }}:9216"
+
+  # SeaweedFS exposes Prometheus metrics natively (-metricsPort), no
+  # separate exporter needed.
+  - job_name: seaweedfs
+    static_configs:
+      - targets:
+          - "{{ rivendell_host }}:9327"
 
   # pve-exporter is a proxying exporter, same pattern as blackbox_exporter -
   # Prometheus scrapes the exporter's own address, but tells it which real

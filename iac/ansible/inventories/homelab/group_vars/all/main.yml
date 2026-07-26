@@ -37,6 +37,7 @@ updates_reboot_timeout_seconds: 300
 ansible_python_interpreter: /usr/bin/python3
 
 # Where docker-compose stacks get deployed on any docker_install'd host -
-# gpu-box (dockge/jellyfin/ollama/open_webui) and palantir (prometheus/
-# grafana) both use this.
+# gpu-box (dockge/jellyfin/ollama/open_webui), palantir (prometheus/
+# grafana), and rivendell (postgres/mongodb/seaweedfs/cloudbeaver) all use
+# this.
 docker_stacks_dir: /opt/stacks

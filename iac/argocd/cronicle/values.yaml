@@ -1,0 +1,14 @@
+image:
+  repository: cronicle/cronicle
+  tag: latest
+  pullPolicy: Always
+
+# Cronicle's own state (job defs, run history) lives in SeaweedFS
+# (rivendell), not a PVC - see README.md. This is only the bucket
+# name/prefix, not credentials - those come from the s3SecretName Secret
+# below.
+storage:
+  bucket: cronicle
+  keyPrefix: cronicle/
+
+s3SecretName: cronicle-s3

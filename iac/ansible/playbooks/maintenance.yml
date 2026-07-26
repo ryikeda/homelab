@@ -1,6 +1,6 @@
 ---
 - name: Run routine maintenance on Linux hosts
-  hosts: linux:proxmox:reverse_proxy:dns:gpu:monitoring:container_management:kubernetes
+  hosts: linux:proxmox:reverse_proxy:dns:gpu:monitoring:storage:container_management:kubernetes
   gather_facts: true
   become: true
   roles:

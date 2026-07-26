@@ -1,0 +1,19 @@
+# HostRegexp on the subdomain prefix, not the literal hostname - same
+# reasoning as homepage/argocd/cronicle: this repo is public, the real
+# domain isn't committed anywhere. The external Traefik LXC preserves
+# the original Host header by default, so this still routes correctly
+# without ever needing to know the real domain.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: openwebui
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: HostRegexp(`^openwebui\..+$`)
+      kind: Rule
+      services:
+        - name: openwebui
+          port: http

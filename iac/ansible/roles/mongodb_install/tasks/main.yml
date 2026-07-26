@@ -1,0 +1,23 @@
+---
+- name: Ensure the MongoDB stack directory exists
+  ansible.builtin.file:
+    path: "{{ mongodb_install_dir }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+
+- name: Deploy the MongoDB compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ mongodb_install_dir }}/compose.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: mongodb_install_compose_file
+
+- name: Start the MongoDB stack
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ mongodb_install_dir }}"
+  when: mongodb_install_compose_file.changed

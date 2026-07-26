@@ -1,0 +1,15 @@
+# Note what's deliberately NOT here: Ollama's address, the Postgres
+# connection string, and SeaweedFS credentials - all real LAN
+# IPs/credentials, so they come from a Sealed Secret (see README.md),
+# not Helm values. This repo is public.
+image:
+  repository: ghcr.io/open-webui/open-webui
+  tag: main
+  pullPolicy: Always
+
+replicaCount: 1
+
+# Fresh start (no migration from the old gpu_host deployment, agreed) and
+# fully stateless - Postgres for structured data, SeaweedFS
+# (S3-compatible) for uploads, both via configSecretName below. No PVC.
+configSecretName: openwebui-config

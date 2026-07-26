@@ -1,0 +1,23 @@
+---
+- name: Ensure the Postgres stack directory exists
+  ansible.builtin.file:
+    path: "{{ postgres_install_dir }}"
+    state: directory
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0755"
+
+- name: Deploy the Postgres compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ postgres_install_dir }}/compose.yaml"
+    owner: "{{ admin_user_name }}"
+    group: "{{ admin_user_name }}"
+    mode: "0644"
+  register: postgres_install_compose_file
+
+- name: Start the Postgres stack
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ postgres_install_dir }}"
+  when: postgres_install_compose_file.changed

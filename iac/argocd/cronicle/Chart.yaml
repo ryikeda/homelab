@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cronicle
+description: Cronicle job scheduler for the homelab, backing the DB/bucket backup jobs
+type: application
+version: 0.1.0
+appVersion: latest
