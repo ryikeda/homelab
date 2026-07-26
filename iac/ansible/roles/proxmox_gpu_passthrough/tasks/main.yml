@@ -39,7 +39,7 @@
         regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
         line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ proxmox_gpu_grub_desired }}"'
       register: proxmox_gpu_grub_update
-      notify: update grub
+      notify: Update grub
 
     - name: Blacklist native GPU drivers so vfio-pci can claim the card
       ansible.builtin.copy:
@@ -50,7 +50,7 @@
           {% endfor %}
         mode: "0644"
       register: proxmox_gpu_blacklist_update
-      notify: update initramfs
+      notify: Update initramfs
 
     - name: Bind target GPU PCI IDs to vfio-pci
       ansible.builtin.copy:
@@ -59,7 +59,7 @@
           options vfio-pci ids={{ proxmox_gpu_passthrough_pci_ids | join(',') }}
         mode: "0644"
       register: proxmox_gpu_vfio_update
-      notify: update initramfs
+      notify: Update initramfs
 
     - name: Ensure vfio modules load at boot
       ansible.builtin.lineinfile:
@@ -73,7 +73,7 @@
         - vfio_pci
         - vfio_virqfd
       register: proxmox_gpu_modules_update
-      notify: update initramfs
+      notify: Update initramfs
 
     - name: Determine the PCI bus address of the mapped GPU
       ansible.builtin.shell: |
@@ -126,7 +126,11 @@
             | list
           }}
         proxmox_gpu_mapping_desired: >-
-          node={{ ansible_facts.hostname }},path={{ proxmox_gpu_mapping_path.stdout }},id={{ proxmox_gpu_passthrough_pci_ids[0] }},iommugroup={{ proxmox_gpu_mapping_iommu_group.stdout }},subsystem-id={{ proxmox_gpu_mapping_subsystem_id.stdout }}
+          node={{ ansible_facts.hostname
+          }},path={{ proxmox_gpu_mapping_path.stdout
+          }},id={{ proxmox_gpu_passthrough_pci_ids[0]
+          }},iommugroup={{ proxmox_gpu_mapping_iommu_group.stdout
+          }},subsystem-id={{ proxmox_gpu_mapping_subsystem_id.stdout }}
       when: proxmox_gpu_passthrough_mapping_name | length > 0
 
     - name: Create the PCI resource mapping

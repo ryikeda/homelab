@@ -1,8 +1,8 @@
 resource "proxmox_virtual_environment_container" "traefik" {
   node_name = var.pve_node
-  vm_id = 103
-  tags  = ["ubuntu-2404" ]
-  
+  vm_id     = 103
+  tags      = ["ubuntu-2404"]
+
   operating_system {
     template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
     type             = "ubuntu"

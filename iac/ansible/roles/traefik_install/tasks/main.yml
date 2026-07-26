@@ -117,7 +117,7 @@
     owner: "{{ traefik_user }}"
     group: "{{ traefik_group }}"
     mode: "0644"
-  notify: restart traefik
+  notify: Restart traefik
 
 - name: Deploy the dynamic Traefik configuration
   ansible.builtin.template:
@@ -126,7 +126,7 @@
     owner: "{{ traefik_user }}"
     group: "{{ traefik_group }}"
     mode: "0644"
-  notify: restart traefik
+  notify: Restart traefik
 
 - name: Deploy the Cloudflare API token env file
   ansible.builtin.copy:
@@ -136,7 +136,7 @@
     group: "{{ traefik_group }}"
     mode: "0600"
   no_log: true
-  notify: restart traefik
+  notify: Restart traefik
 
 - name: Deploy the traefik systemd unit
   ansible.builtin.template:
@@ -145,7 +145,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart traefik
+  notify: Restart traefik
 
 - name: Ensure the traefik service is enabled and running
   ansible.builtin.systemd:

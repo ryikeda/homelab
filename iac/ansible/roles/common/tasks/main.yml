@@ -50,4 +50,4 @@
   when:
     - ansible_facts.os_family == "Debian"
     - "'proxmox' not in group_names"
-  notify: restart systemd-resolved
+  notify: Restart systemd-resolved

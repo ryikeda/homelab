@@ -2,8 +2,8 @@
 resource "proxmox_virtual_environment_vm" "gondor" {
   name      = "gondor"
   node_name = var.pve_node
-  vm_id = 300
-  tags  = ["k8s", "ubuntu-2404"]
+  vm_id     = 300
+  tags      = ["k8s", "ubuntu-2404"]
 
   clone {
     vm_id = 9000
@@ -86,8 +86,8 @@ resource "proxmox_virtual_environment_vm" "gondor" {
 resource "proxmox_virtual_environment_vm" "rohan" {
   name      = "rohan"
   node_name = var.pve_node
-  vm_id = 301
-  tags  = ["k8s", "ubuntu-2404"]
+  vm_id     = 301
+  tags      = ["k8s", "ubuntu-2404"]
 
   depends_on = [proxmox_virtual_environment_vm.gondor]
 
@@ -165,8 +165,8 @@ resource "proxmox_virtual_environment_vm" "rohan" {
 resource "proxmox_virtual_environment_vm" "shire" {
   name      = "shire"
   node_name = var.pve_node
-  vm_id = 302
-  tags  = ["k8s", "ubuntu-2404"]
+  vm_id     = 302
+  tags      = ["k8s", "ubuntu-2404"]
 
   depends_on = [proxmox_virtual_environment_vm.gondor]
 

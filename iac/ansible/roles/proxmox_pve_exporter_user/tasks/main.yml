@@ -166,6 +166,7 @@
       {{
         ('A new API token was generated and saved to ' + pve_exporter_token_output_path + '.')
         if (pve_exporter_token_add is not skipped and pve_exporter_token_add.rc == 0)
-        else ('An API token already exists for this user; run `pveum user token list ' + pve_exporter_user_id + '` on the host to inspect it, or delete it there to have this role mint a replacement.')
+        else ('An API token already exists for this user; run `pveum user token list ' + pve_exporter_user_id +
+          '` on the host to inspect it, or delete it there to have this role mint a replacement.')
       }}
   when: pve_exporter_manage_user | bool

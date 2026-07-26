@@ -1,7 +1,7 @@
 resource "proxmox_virtual_environment_container" "portainer" {
   node_name = var.pve_node
-  vm_id = 105
-  tags  = ["ubuntu-2404" ]
+  vm_id     = 105
+  tags      = ["ubuntu-2404"]
 
   operating_system {
     template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
@@ -30,7 +30,7 @@ resource "proxmox_virtual_environment_container" "portainer" {
 
   disk {
     datastore_id = "local-vmstore"
-    size = 8
+    size         = 8
   }
 
   network_interface {
@@ -78,7 +78,7 @@ resource "proxmox_virtual_environment_container" "portainer" {
       ansible-playbook playbooks/bootstrap.yml --limit portainer -e ansible_user=root
       ansible-playbook playbooks/portainer.yml --limit portainer
     EOT
-    on_failure = continue
+    on_failure  = continue
   }
 }
 

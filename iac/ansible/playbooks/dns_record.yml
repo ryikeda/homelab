@@ -16,4 +16,5 @@
     # itself (no module doing the file-parsing for us).
     technitium_api_token: "{{ lookup('file', lookup('env', 'HOME') + '/.technitium/ansible.env') | trim }}"
   tasks:
-    - ansible.builtin.import_tasks: ../tasks/technitium_record.yml
+    - name: Register the DNS record
+      ansible.builtin.import_tasks: ../tasks/technitium_record.yml

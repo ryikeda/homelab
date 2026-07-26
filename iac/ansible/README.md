@@ -9,7 +9,8 @@ This directory manages homelab configuration with Ansible.
 - `playbooks/`: thin orchestration layers that assign roles to groups.
 - `roles/`: reusable configuration and operations logic.
 - `collections/requirements.yml`: Ansible collection dependencies.
-- `pyproject.toml`/`uv.lock`: Python dependencies for running Ansible itself (`ansible-core`, `httpx`) - reproducible via `uv`, not whatever happens to be on the operator's machine.
+- `pyproject.toml`/`uv.lock`: Python dependencies for running Ansible itself (`ansible-core`, `httpx`) - reproducible via `uv`, not whatever happens to be on the operator's machine. The `dev` dependency group (`ansible-lint`, `yamllint`) is CI/local-lint tooling, not needed to actually run playbooks.
+- `.ansible-lint`/`.yamllint`: lint config, also used by `.github/workflows/ci.yml`.
 
 ## Requirements
 
@@ -59,6 +60,18 @@ The default inventory is configured in `ansible.cfg`.
 ## Adding Hosts
 
 Add hosts to the relevant logical group in `inventories/homelab/hosts.yml`, then put reusable settings in `group_vars/all.yml` or the matching group file.
+
+## Linting
+
+`uv sync` also installs `ansible-lint` and `yamllint` (the `dev` dependency group). Run them the same way CI does:
+
+```sh
+uv run ansible-galaxy collection install -r collections/requirements.yml -p collections
+uv run ansible-lint
+uv run yamllint .
+```
+
+`var-naming[no-role-prefix]` is skipped in `.ansible-lint` - most existing roles predate that convention; it's a pre-existing cleanup, not enforced yet.
 
 ## Secrets
 

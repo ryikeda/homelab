@@ -1,3 +1,6 @@
 ---
-- import_playbook: bootstrap.yml
-- import_playbook: proxmox.yml
+- name: Bootstrap
+  import_playbook: bootstrap.yml
+
+- name: Configure Proxmox
+  import_playbook: proxmox.yml
