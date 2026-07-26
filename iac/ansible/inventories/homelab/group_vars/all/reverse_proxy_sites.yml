@@ -1,5 +1,6 @@
 ---
 traefik_install_reverse_proxy_sites:
+  # --- Non-k8s hosts/LXCs - each upstream is that service's own host:port ---
   - hostname: "pve.{{ local_domain }}"
     upstream: "https://{{ pve_host }}:8006"
     # Proxmox's web UI serves its own self-signed cert - skip verifying it
@@ -7,8 +8,6 @@ traefik_install_reverse_proxy_sites:
     # trusted cert for clients). Same reasoning as proxmox_insecure in
     # iac/opentofu.
     insecure_skip_verify: true
-  - hostname: "homepage.{{ local_domain }}"
-    upstream: "http://{{ gondor_host }}:30081"
   - hostname: "jellyfin.{{ local_domain }}"
     upstream: "http://{{ gpu_host }}:8096"
   - hostname: "ollama.{{ local_domain }}"
@@ -21,12 +20,19 @@ traefik_install_reverse_proxy_sites:
     upstream: "http://{{ palantir_host }}:3000"
   - hostname: "prometheus.{{ local_domain }}"
     upstream: "http://{{ palantir_host }}:9090"
+
+  # --- k8s workloads - all share the same upstream: the in-cluster Traefik
+  # ingress controller's MetalLB IP (iac/argocd/apps/ingress-controller.yaml).
+  # It, not this LXC, does the actual per-app routing, disambiguating by
+  # Host header against each workload's own IngressRoute (HostRegexp on the
+  # subdomain prefix - see iac/argocd/homepage/templates/ingressroute.yaml
+  # and roles/argocd_install/files/argocd-ingressroute.yaml). Adding a new
+  # k8s workload never needs a new entry here - only new ones exposed
+  # outside the cluster, like these two, do. ---
+  - hostname: "homepage.{{ local_domain }}"
+    upstream: "http://{{ k8s_ingress_lb_ip }}"
   - hostname: "argocd.{{ local_domain }}"
-    upstream: "https://{{ gondor_host }}:30443"
-    # Argo CD keeps its own self-signed cert on this port - skip verifying
-    # it on the upstream leg, same reasoning as pve.local.ikeda.codes above.
-    # Exposed via a fixed NodePort (roles/argocd_install), not a
-    # LoadBalancer/Ingress controller - reachable via any cluster node's
-    # IP, gondor picked for consistency with the other single-upstream
-    # entries here.
-    insecure_skip_verify: true
+    # Argo CD serves plain HTTP internally (server.insecure=true, see
+    # roles/argocd_install) - this LXC already terminates real TLS at the
+    # edge, so there's no self-signed backend leg to skip-verify anymore.
+    upstream: "http://{{ k8s_ingress_lb_ip }}"

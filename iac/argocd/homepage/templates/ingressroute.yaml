@@ -1,0 +1,19 @@
+# HostRegexp on the subdomain prefix, not the literal hostname - this repo
+# is public, and the real domain isn't committed anywhere (see README.md).
+# The external Traefik LXC preserves the original Host header
+# (passHostHeader defaults to true) when it forwards here, so this still
+# routes correctly without ever needing to know the real domain.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: homepage
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: HostRegexp(`^homepage\..+$`)
+      kind: Rule
+      services:
+        - name: homepage
+          port: http

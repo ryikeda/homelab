@@ -4,15 +4,3 @@ argocd_install_namespace: argocd
 # Bump deliberately - check https://artifacthub.io/packages/helm/argo/argo-cd
 # for the current chart version and the Argo CD (appVersion) it maps to.
 argocd_install_chart_version: "10.2.1"
-
-# TODO: revisit once there's more than one or two NodePort services (or once
-# HA actually matters) - MetalLB gives a stable virtual IP instead of tying
-# the Traefik upstream to whichever specific node happens to be listed.
-#
-# Both pinned explicitly - the chart exposes an http port too even though
-# Traefik only ever points at https, and leaving it unset means Kubernetes
-# assigns a random port from the NodePort range, which can silently collide
-# with a fixed port picked for something else later (it did, with
-# homepage's 30080 - see iac/argocd/homepage/values.yaml).
-argocd_install_nodeport_http: 30080
-argocd_install_nodeport_https: 30443

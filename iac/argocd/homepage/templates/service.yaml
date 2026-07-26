@@ -1,20 +1,16 @@
-# NodePort, not ClusterIP - no in-cluster ingress controller (k3s's bundled
-# traefik/servicelb is disabled, see roles/k3s_install). Reached from the
-# existing standalone Traefik LXC the same way as Argo CD's NodePort.
-# TODO: revisit once there's more than one or two NodePort services (or once
-# HA actually matters) - MetalLB gives a stable virtual IP instead of tying
-# the Traefik upstream to whichever specific node happens to be listed.
+# ClusterIP - routed to from the LAN via the in-cluster Traefik ingress
+# controller (see templates/ingressroute.yaml and
+# iac/argocd/apps/ingress-controller.yaml), not exposed directly.
 apiVersion: v1
 kind: Service
 metadata:
   name: homepage
   namespace: {{ .Release.Namespace }}
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
     - port: 3000
       targetPort: http
-      nodePort: {{ .Values.service.nodePort }}
       protocol: TCP
       name: http
   selector:

@@ -14,10 +14,31 @@
     --namespace {{ argocd_install_namespace }}
     --create-namespace
     --version {{ argocd_install_chart_version }}
-    --set server.service.type=NodePort
-    --set server.service.nodePortHttp={{ argocd_install_nodeport_http }}
-    --set server.service.nodePortHttps={{ argocd_install_nodeport_https }}
+    --set configs.params."server\.insecure"=true
     --wait
   environment:
     KUBECONFIG: "{{ k3s_kubeconfig_path }}"
   changed_when: true
+
+- name: Copy the Argo CD IngressRoute manifest
+  ansible.builtin.copy:
+    src: argocd-ingressroute.yaml
+    dest: /tmp/argocd-ingressroute.yaml
+    mode: "0644"
+
+# The Traefik ingress controller's CRDs need to already be installed
+# (iac/argocd/apps/ingress-controller.yaml) - retry rather than race it.
+- name: Apply the Argo CD IngressRoute manifest
+  ansible.builtin.command: kubectl apply -f /tmp/argocd-ingressroute.yaml
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  register: argocd_install_ingressroute_apply
+  changed_when: true
+  retries: 5
+  delay: 5
+  until: argocd_install_ingressroute_apply.rc == 0
+
+- name: Remove the copied IngressRoute manifest
+  ansible.builtin.file:
+    path: /tmp/argocd-ingressroute.yaml
+    state: absent

@@ -14,7 +14,9 @@ Each workload is its own local Helm chart (see `homepage/` for the shape: `Chart
 2. Add a file under `apps/` - an Argo CD `Application` resource pointing at that subdirectory.
 3. Commit - `root.yaml`'s automated sync picks it up (polls by default, no webhook - this cluster isn't publicly reachable yet). No Ansible role, no manual `kubectl`/`argocd` command needed for the workload itself.
 
-**Keeping secrets out of git**: this repo is public. Anything sensitive (API keys, the actual domain, credentials) goes through [Sealed Secrets](https://github.com/bitnami/sealed-secrets) (`iac/ansible/playbooks/sealed_secrets_install.yml`) - encrypt with `kubeseal`, commit the resulting `SealedSecret` (ciphertext, safe to publish), reference the real Secret it decrypts to from the chart via `valueFrom: secretKeyRef`. Never a plain `Secret` or a real value in `values.yaml`/`templates/`. See `homepage/README.md` for a worked example.
+**Exposing it to the LAN**: give it a `ClusterIP` Service (never `NodePort`/`LoadBalancer` directly - see `apps/ingress-controller.yaml`) plus an `IngressRoute` matching `HostRegexp` on its own subdomain prefix, e.g. `HostRegexp(`^myapp\..+$`)` - not the literal hostname, since the real domain isn't committed anywhere (see `homepage/templates/ingressroute.yaml` for a worked example, and `homepage/README.md` for why). That's the whole exposure story: no NodePort to pick, no LXC/DNS change, no new MetalLB IP - the in-cluster ingress controller routes by `Host` header to whatever `IngressRoute`s exist.
+
+**Keeping secrets out of git**: this repo is public. Anything sensitive (API keys, the actual domain, credentials) goes through [Sealed Secrets](https://github.com/bitnami/sealed-secrets) (`apps/sealed-secrets.yaml`) - encrypt with `kubeseal`, commit the resulting `SealedSecret` (ciphertext, safe to publish), reference the real Secret it decrypts to from the chart via `valueFrom: secretKeyRef`. Never a plain `Secret` or a real value in `values.yaml`/`templates/`. See `homepage/README.md` for a worked example.
 
 ## Linting
 

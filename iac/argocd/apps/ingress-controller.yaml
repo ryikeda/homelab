@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-controller
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://traefik.github.io/charts
+    chart: traefik
+    # Bump deliberately - check
+    # https://artifacthub.io/packages/helm/traefik/traefik for the
+    # current chart version.
+    targetRevision: 33.2.1
+    helm:
+      # Deliberately no MetalLB pinned-IP annotation here - this repo is
+      # public, and a pinned annotation would mean committing the real
+      # LAN IP. MetalLB auto-assigns the first free pool address instead
+      # (see roles/metallb_install) since this is the only
+      # LoadBalancer-type Service in the cluster; read it back with
+      # `kubectl get svc -n ingress-controller` and record it as
+      # k8s_ingress_lb_ip in local.yml.
+      values: |
+        service:
+          type: LoadBalancer
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-controller
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Traefik ships CRDs that routinely exceed kubectl's
+      # last-applied-configuration annotation size limit.
+      - ServerSideApply=true
