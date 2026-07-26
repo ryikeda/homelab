@@ -1,6 +1,6 @@
 services:
   nvidia-gpu-exporter:
-    image: utkuozdemir/nvidia_gpu_exporter:{{ nvidia_gpu_exporter_version }}
+    image: utkuozdemir/nvidia_gpu_exporter:{{ nvidia_gpu_exporter_install_version }}
     restart: unless-stopped
     network_mode: host
     # CDI-qualified device request, same as jellyfin/ollama/open_webui -

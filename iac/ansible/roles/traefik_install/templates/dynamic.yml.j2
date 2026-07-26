@@ -1,6 +1,6 @@
 http:
   routers:
-{% for site in reverse_proxy_sites %}
+{% for site in traefik_install_reverse_proxy_sites %}
     {{ site.hostname | replace('.', '-') }}:
       rule: "Host(`{{ site.hostname }}`)"
       entryPoints:
@@ -26,7 +26,7 @@ http:
           - "{{ traefik_dashboard_user }}:{{ traefik_dashboard_password_hash }}"
 
   services:
-{% for site in reverse_proxy_sites %}
+{% for site in traefik_install_reverse_proxy_sites %}
     {{ site.hostname | replace('.', '-') }}:
       loadBalancer:
         servers:
@@ -36,7 +36,7 @@ http:
 {% endif %}
 {% endfor %}
 
-{% if reverse_proxy_sites | selectattr('insecure_skip_verify', 'defined') | selectattr('insecure_skip_verify') | list | length > 0 %}
+{% if traefik_install_reverse_proxy_sites | selectattr('insecure_skip_verify', 'defined') | selectattr('insecure_skip_verify') | list | length > 0 %}
   serversTransports:
     insecure-skip-verify:
       insecureSkipVerify: true

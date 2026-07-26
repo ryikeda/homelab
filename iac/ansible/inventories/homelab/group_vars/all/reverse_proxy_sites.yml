@@ -1,5 +1,5 @@
 ---
-reverse_proxy_sites:
+traefik_install_reverse_proxy_sites:
   - hostname: "pve.{{ local_domain }}"
     upstream: "https://{{ pve_host }}:8006"
     # Proxmox's web UI serves its own self-signed cert - skip verifying it

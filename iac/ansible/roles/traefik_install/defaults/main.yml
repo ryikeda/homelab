@@ -1,16 +1,16 @@
 ---
 # Bump deliberately - check https://github.com/traefik/traefik/releases.
-traefik_version: "v3.7.9"
+traefik_install_version: "v3.7.9"
 
-traefik_binary_path: /usr/local/bin/traefik
-traefik_version_marker: /usr/local/lib/traefik-install-version
-traefik_config_dir: /etc/traefik
-traefik_dynamic_config_dir: "{{ traefik_config_dir }}/dynamic"
-traefik_data_dir: /var/lib/traefik
+traefik_install_binary_path: /usr/local/bin/traefik
+traefik_install_version_marker: /usr/local/lib/traefik-install-version
+traefik_install_config_dir: /etc/traefik
+traefik_install_dynamic_config_dir: "{{ traefik_install_config_dir }}/dynamic"
+traefik_install_data_dir: /var/lib/traefik
 
-traefik_user: traefik
-traefik_group: traefik
+traefik_install_user: traefik
+traefik_install_group: traefik
 
-# Declared reverse-proxy targets - see group_vars/all/reverse_proxy_sites.yml
+# Declared reverse-proxy targets - see group_vars/all/traefik_install_reverse_proxy_sites.yml
 # for the real list (same declared-list pattern as technitium_dns_records).
-reverse_proxy_sites: []
+traefik_install_reverse_proxy_sites: []

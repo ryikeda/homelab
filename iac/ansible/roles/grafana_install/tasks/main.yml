@@ -2,9 +2,9 @@
 - name: Ensure the admin password is set
   ansible.builtin.assert:
     that:
-      - grafana_admin_password | default('') | length > 0
+      - grafana_install_admin_password | default('') | length > 0
     fail_msg: >-
-      grafana_admin_password is empty - set a real password in local.yml.
+      grafana_install_admin_password is empty - set a real password in local.yml.
 
 - name: Ensure the Grafana stack directories exist
   ansible.builtin.file:
@@ -14,16 +14,16 @@
     group: "{{ admin_user_name }}"
     mode: "0755"
   loop:
-    - "{{ grafana_dir }}"
-    - "{{ grafana_dir }}/provisioning/datasources"
-    - "{{ grafana_dir }}/provisioning/dashboards"
-    - "{{ grafana_dir }}/dashboards"
+    - "{{ grafana_install_dir }}"
+    - "{{ grafana_install_dir }}/provisioning/datasources"
+    - "{{ grafana_install_dir }}/provisioning/dashboards"
+    - "{{ grafana_install_dir }}/dashboards"
 
 # The official image runs as UID 472 (grafana), not root - same reasoning
 # as the Prometheus data directory in prometheus_install.
 - name: Ensure the Grafana data directory exists with the container's UID
   ansible.builtin.file:
-    path: "{{ grafana_dir }}/data"
+    path: "{{ grafana_install_dir }}/data"
     state: directory
     owner: "472"
     group: "472"
@@ -33,20 +33,20 @@
 - name: Deploy the Prometheus datasource provisioning file
   ansible.builtin.template:
     src: prometheus-datasource.yaml.j2
-    dest: "{{ grafana_dir }}/provisioning/datasources/prometheus.yaml"
+    dest: "{{ grafana_install_dir }}/provisioning/datasources/prometheus.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: grafana_datasource_file
+  register: grafana_install_datasource_file
 
 - name: Deploy the dashboards provider configuration
   ansible.builtin.template:
     src: dashboards-provider.yaml.j2
-    dest: "{{ grafana_dir }}/provisioning/dashboards/dashboards.yaml"
+    dest: "{{ grafana_install_dir }}/provisioning/dashboards/dashboards.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: grafana_dashboards_provider_file
+  register: grafana_install_dashboards_provider_file
 
 # Grafana's file provider polls this directory itself (updateIntervalSeconds
 # in dashboards-provider.yaml.j2) - no restart needed for the dashboards
@@ -54,7 +54,7 @@
 - name: Deploy the dashboard JSON files
   ansible.builtin.copy:
     src: dashboards/
-    dest: "{{ grafana_dir }}/dashboards/"
+    dest: "{{ grafana_install_dir }}/dashboards/"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
@@ -62,22 +62,22 @@
 - name: Deploy the Grafana compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ grafana_dir }}/compose.yaml"
+    dest: "{{ grafana_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: grafana_compose_file
+  register: grafana_install_compose_file
 
 - name: Start the Grafana stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ grafana_dir }}"
-  when: grafana_compose_file.changed
+    chdir: "{{ grafana_install_dir }}"
+  when: grafana_install_compose_file.changed
 
 - name: Restart Grafana if the datasource or dashboards-provider config changed
   ansible.builtin.command: docker compose restart
   args:
-    chdir: "{{ grafana_dir }}"
+    chdir: "{{ grafana_install_dir }}"
   when: >-
-    (grafana_datasource_file.changed or grafana_dashboards_provider_file.changed)
-    and not grafana_compose_file.changed
+    (grafana_install_datasource_file.changed or grafana_install_dashboards_provider_file.changed)
+    and not grafana_install_compose_file.changed

@@ -1,7 +1,7 @@
 ---
 - name: Ensure the Portainer agent stack directory exists
   ansible.builtin.file:
-    path: "{{ portainer_agent_dir }}"
+    path: "{{ portainer_agent_install_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -10,14 +10,14 @@
 - name: Deploy the Portainer agent compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ portainer_agent_dir }}/compose.yaml"
+    dest: "{{ portainer_agent_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: portainer_agent_compose_file
+  register: portainer_agent_install_compose_file
 
 - name: Start the Portainer agent stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ portainer_agent_dir }}"
-  when: portainer_agent_compose_file.changed
+    chdir: "{{ portainer_agent_install_dir }}"
+  when: portainer_agent_install_compose_file.changed

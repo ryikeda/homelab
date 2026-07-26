@@ -1,27 +1,27 @@
 ---
 - name: Check the currently installed Helm version marker
   ansible.builtin.stat:
-    path: "{{ helm_version_marker }}"
-  register: helm_version_marker_stat
+    path: "{{ helm_install_version_marker }}"
+  register: helm_install_version_marker_stat
 
 - name: Read the current Helm version marker contents
   ansible.builtin.slurp:
-    src: "{{ helm_version_marker }}"
-  register: helm_version_marker_contents
-  when: helm_version_marker_stat.stat.exists
+    src: "{{ helm_install_version_marker }}"
+  register: helm_install_version_marker_contents
+  when: helm_install_version_marker_stat.stat.exists
 
 - name: Determine whether Helm needs to be (re)installed
   ansible.builtin.set_fact:
     helm_install_needed: >-
-      {{ not helm_version_marker_stat.stat.exists
-         or (helm_version_marker_contents.content | b64decode | trim) != helm_version }}
+      {{ not helm_install_version_marker_stat.stat.exists
+         or (helm_install_version_marker_contents.content | b64decode | trim) != helm_install_version }}
 
 - name: Download, extract, and install Helm
   when: helm_install_needed
   block:
     - name: Download the Helm release archive
       ansible.builtin.get_url:
-        url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+        url: "https://get.helm.sh/helm-v{{ helm_install_version }}-linux-amd64.tar.gz"
         dest: /tmp/helm.tar.gz
         mode: "0644"
 
@@ -36,7 +36,7 @@
     - name: Install the Helm binary
       ansible.builtin.copy:
         src: /tmp/linux-amd64/helm
-        dest: "{{ helm_binary_path }}"
+        dest: "{{ helm_install_binary_path }}"
         remote_src: true
         owner: root
         group: root
@@ -52,8 +52,8 @@
 
     - name: Record the installed Helm version marker
       ansible.builtin.copy:
-        content: "{{ helm_version }}\n"
-        dest: "{{ helm_version_marker }}"
+        content: "{{ helm_install_version }}\n"
+        dest: "{{ helm_install_version_marker }}"
         owner: root
         group: root
         mode: "0644"

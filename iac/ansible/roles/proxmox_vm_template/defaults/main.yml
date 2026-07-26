@@ -1,15 +1,15 @@
 ---
-proxmox_vm_templates_manage: false
+proxmox_vm_template_templates_manage: false
 
 # Where cloud images get downloaded to before qm importdisk copies them into
 # the target storage. Not a Proxmox content directory, just scratch space.
-proxmox_vm_templates_download_dir: /var/lib/vz/template/cloudimg
+proxmox_vm_template_templates_download_dir: /var/lib/vz/template/cloudimg
 
 # Each entry downloads one cloud image and turns it into a Proxmox VM
 # template that OpenTofu can clone. Existing templates (matched by vmid) are
 # left alone — delete the VM manually and re-run to rebuild one. Example:
 #
-# proxmox_vm_templates:
+# proxmox_vm_template_templates:
 #   - name: ubuntu-2404
 #     vmid: 9000
 #     image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
@@ -32,4 +32,4 @@ proxmox_vm_templates_download_dir: /var/lib/vz/template/cloudimg
 #     vmid: 9002
 #     image_url: https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2
 #     storage: local-vmstore
-proxmox_vm_templates: []
+proxmox_vm_template_templates: []

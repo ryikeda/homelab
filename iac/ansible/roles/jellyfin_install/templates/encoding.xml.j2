@@ -12,7 +12,7 @@
   <ThrottleDelaySeconds>180</ThrottleDelaySeconds>
   <EnableSegmentDeletion>false</EnableSegmentDeletion>
   <SegmentKeepSeconds>720</SegmentKeepSeconds>
-  <HardwareAccelerationType>{{ jellyfin_hardware_acceleration_type }}</HardwareAccelerationType>
+  <HardwareAccelerationType>{{ jellyfin_install_hardware_acceleration_type }}</HardwareAccelerationType>
   <EncoderAppPath />
   <EncoderAppPathDisplay />
   <VaapiDevice>/dev/dri/renderD128</VaapiDevice>
@@ -42,15 +42,15 @@
   <EnableIntelLowPowerH264HwEncoder>false</EnableIntelLowPowerH264HwEncoder>
   <EnableIntelLowPowerHevcHwEncoder>false</EnableIntelLowPowerHevcHwEncoder>
   <EnableHardwareEncoding>true</EnableHardwareEncoding>
-  <AllowHevcEncoding>{{ jellyfin_allow_hevc_encoding | lower }}</AllowHevcEncoding>
-  <AllowAv1Encoding>{{ jellyfin_allow_av1_encoding | lower }}</AllowAv1Encoding>
+  <AllowHevcEncoding>{{ jellyfin_install_allow_hevc_encoding | lower }}</AllowHevcEncoding>
+  <AllowAv1Encoding>{{ jellyfin_install_allow_av1_encoding | lower }}</AllowAv1Encoding>
   <EnableSubtitleExtraction>true</EnableSubtitleExtraction>
   <SubtitleExtractionTimeoutMinutes>30</SubtitleExtractionTimeoutMinutes>
   <AllowOnDemandMetadataBasedKeyframeExtractionForExtensions>
     <string>mkv</string>
   </AllowOnDemandMetadataBasedKeyframeExtractionForExtensions>
   <HardwareDecodingCodecs>
-{% for codec in jellyfin_hardware_decoding_codecs -%}
+{% for codec in jellyfin_install_hardware_decoding_codecs -%}
     <string>{{ codec }}</string>
 {% endfor -%}
   </HardwareDecodingCodecs>

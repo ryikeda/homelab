@@ -4,10 +4,10 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User={{ node_exporter_user }}
-Group={{ node_exporter_group }}
+User={{ node_exporter_install_user }}
+Group={{ node_exporter_install_group }}
 Type=simple
-ExecStart={{ node_exporter_binary_path }} --web.listen-address=:{{ node_exporter_port }}
+ExecStart={{ node_exporter_install_binary_path }} --web.listen-address=:{{ node_exporter_install_port }}
 Restart=on-failure
 
 [Install]

@@ -1,6 +1,6 @@
 services:
   portainer:
-    image: portainer/portainer-ce:{{ portainer_version }}
+    image: portainer/portainer-ce:{{ portainer_install_version }}
     restart: unless-stopped
     network_mode: host
     volumes:

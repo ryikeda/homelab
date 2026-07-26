@@ -1,17 +1,17 @@
 ---
-opentofu_manage_user: false
+proxmox_opentofu_user_manage_user: false
 
-opentofu_user_name: opentofu
-opentofu_user_realm: pve
-opentofu_user_id: "{{ opentofu_user_name }}@{{ opentofu_user_realm }}"
-opentofu_user_comment: "OpenTofu/Terraform automation user"
+proxmox_opentofu_user_name: opentofu
+proxmox_opentofu_user_realm: pve
+proxmox_opentofu_user_id: "{{ proxmox_opentofu_user_name }}@{{ proxmox_opentofu_user_realm }}"
+proxmox_opentofu_user_comment: "OpenTofu/Terraform automation user"
 
 # Custom role scoped for the bpg/proxmox provider, per its documented example:
 # https://github.com/bpg/terraform-provider-proxmox/blob/main/docs/index.md
 # Upstream notes this list is broader than most setups need — trim it once you
 # know which resources your OpenTofu configs actually manage.
-opentofu_role_name: Terraform
-opentofu_role_privileges:
+proxmox_opentofu_user_role_name: Terraform
+proxmox_opentofu_user_role_privileges:
   - Datastore.Allocate
   - Datastore.AllocateSpace
   - Datastore.AllocateTemplate
@@ -59,11 +59,11 @@ opentofu_role_privileges:
   - VM.Replicate
   - VM.Snapshot
   - VM.Snapshot.Rollback
-opentofu_acl_path: /
+proxmox_opentofu_user_acl_path: /
 
-opentofu_token_name: provider
+proxmox_opentofu_user_token_name: provider
 # false = --privsep 0, the token inherits the user's ACL (upstream's documented default).
 # Set true to require a separate ACL grant on the token itself.
-opentofu_token_privsep: false
-opentofu_token_output_dir: "{{ lookup('env', 'HOME') }}/.proxmox"
-opentofu_token_output_path: "{{ opentofu_token_output_dir }}/opentofu.env"
+proxmox_opentofu_user_token_privsep: false
+proxmox_opentofu_user_token_output_dir: "{{ lookup('env', 'HOME') }}/.proxmox"
+proxmox_opentofu_user_token_output_path: "{{ proxmox_opentofu_user_token_output_dir }}/opentofu.env"

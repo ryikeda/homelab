@@ -1,7 +1,7 @@
 ---
 # Bump deliberately - check https://github.com/portainer/portainer/releases
 # (agent is versioned/released alongside the main portainer-ce image).
-portainer_agent_version: "2.39.5"
+portainer_agent_install_version: "2.39.5"
 
-portainer_agent_dir: "{{ docker_stacks_dir }}/portainer-agent"
-portainer_agent_port: 9001
+portainer_agent_install_dir: "{{ docker_stacks_dir }}/portainer-agent"
+portainer_agent_install_port: 9001

@@ -41,7 +41,7 @@
 # automatically, so future edits here don't need a restart.
 - name: Ensure the k3s config directory exists
   ansible.builtin.file:
-    path: "{{ k3s_resolv_conf | dirname }}"
+    path: "{{ k3s_install_resolv_conf | dirname }}"
     state: directory
     owner: root
     group: root
@@ -49,7 +49,7 @@
 
 - name: Write a static resolv.conf for k3s/CoreDNS to forward through
   ansible.builtin.copy:
-    dest: "{{ k3s_resolv_conf }}"
+    dest: "{{ k3s_install_resolv_conf }}"
     content: |
       nameserver {{ opnsense_host }}
       search {{ local_domain }}
@@ -59,24 +59,24 @@
 
 - name: Check the currently installed k3s version
   ansible.builtin.command: k3s --version
-  register: k3s_installed_version
+  register: k3s_install_installed_version
   changed_when: false
   failed_when: false
 
 - name: Check whether the running k3s service already has the desired install flags
   ansible.builtin.command: >-
-    grep -qF -- '--resolv-conf {{ k3s_resolv_conf }}'
+    grep -qF -- '--resolv-conf {{ k3s_install_resolv_conf }}'
     /etc/systemd/system/{{ 'k3s' if 'prod_control_plane' in group_names else 'k3s-agent' }}.service
-  register: k3s_flags_check
+  register: k3s_install_flags_check
   changed_when: false
   failed_when: false
 
 - name: Determine whether k3s needs to be (re)installed
   ansible.builtin.set_fact:
     k3s_install_needed: >-
-      {{ k3s_installed_version.rc != 0
-         or k3s_version not in k3s_installed_version.stdout
-         or k3s_flags_check.rc != 0 }}
+      {{ k3s_install_installed_version.rc != 0
+         or k3s_version not in k3s_install_installed_version.stdout
+         or k3s_install_flags_check.rc != 0 }}
 
 - name: Download the k3s install script
   ansible.builtin.get_url:
@@ -87,7 +87,7 @@
 
 - name: Install k3s server
   ansible.builtin.command: >-
-    /usr/local/bin/k3s-install.sh server {{ k3s_server_extra_args | join(' ') }}
+    /usr/local/bin/k3s-install.sh server {{ k3s_install_server_extra_args | join(' ') }}
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
   when:
@@ -100,7 +100,7 @@
 - name: Read the k3s server node-token
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
-  register: k3s_node_token_raw
+  register: k3s_install_node_token_raw
   when: "'prod_control_plane' in group_names"
 
 # Read via hostvars[groups['prod_control_plane'][0]] in the workers play -
@@ -108,16 +108,16 @@
 # ansible-playbook invocation (see playbooks/k3s_cluster.yml).
 - name: Expose the node-token as a fact for the workers play
   ansible.builtin.set_fact:
-    k3s_node_token: "{{ k3s_node_token_raw.content | b64decode | trim }}"
+    k3s_install_node_token: "{{ k3s_install_node_token_raw.content | b64decode | trim }}"
   when: "'prod_control_plane' in group_names"
 
 - name: Install k3s agent
   ansible.builtin.command: >-
-    /usr/local/bin/k3s-install.sh agent {{ k3s_agent_extra_args | join(' ') }}
+    /usr/local/bin/k3s-install.sh agent {{ k3s_install_agent_extra_args | join(' ') }}
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
-    K3S_URL: "https://{{ hostvars[groups[control_plane_group][0]]['ansible_host'] }}:{{ k3s_api_port }}"
-    K3S_TOKEN: "{{ hostvars[groups[control_plane_group][0]]['k3s_node_token'] }}"
+    K3S_URL: "https://{{ hostvars[groups[k3s_install_control_plane_group][0]]['ansible_host'] }}:{{ k3s_install_api_port }}"
+    K3S_TOKEN: "{{ hostvars[groups[k3s_install_control_plane_group][0]]['k3s_install_node_token'] }}"
   no_log: true
   when:
     - k3s_install_needed

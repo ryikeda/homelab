@@ -1,11 +1,11 @@
 ---
 # Bump deliberately - check https://hub.docker.com/r/prom/prometheus/tags.
-prometheus_version: "v3.13.1"
+prometheus_install_version: "v3.13.1"
 
-prometheus_dir: "{{ docker_stacks_dir }}/prometheus"
-prometheus_retention: 90d
-prometheus_scrape_interval: 15s
+prometheus_install_dir: "{{ docker_stacks_dir }}/prometheus"
+prometheus_install_retention: 90d
+prometheus_install_scrape_interval: 15s
 
-# Declared scrape jobs - see group_vars/all/prometheus_scrape_targets.yml
-# (same declared-list pattern as technitium_dns_records/reverse_proxy_sites).
-prometheus_scrape_targets: []
+# Declared scrape jobs - see group_vars/all/prometheus_install_scrape_targets.yml
+# (same declared-list pattern as technitium_dns_records/traefik_install_reverse_proxy_sites).
+prometheus_install_scrape_targets: []

@@ -6,10 +6,10 @@ Requires=network-online.target
 
 [Service]
 Type=simple
-User={{ traefik_user }}
-Group={{ traefik_group }}
-EnvironmentFile={{ traefik_config_dir }}/cloudflare.env
-ExecStart={{ traefik_binary_path }} --configfile={{ traefik_config_dir }}/traefik.yml
+User={{ traefik_install_user }}
+Group={{ traefik_install_group }}
+EnvironmentFile={{ traefik_install_config_dir }}/cloudflare.env
+ExecStart={{ traefik_install_binary_path }} --configfile={{ traefik_install_config_dir }}/traefik.yml
 Restart=on-failure
 RestartSec=5s
 LimitNOFILE=1048576

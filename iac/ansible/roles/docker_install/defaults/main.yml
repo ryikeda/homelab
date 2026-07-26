@@ -1,24 +1,24 @@
 ---
-docker_gpg_key_path: /etc/apt/keyrings/docker.asc
+docker_install_gpg_key_path: /etc/apt/keyrings/docker.asc
 
 # Pinned exact versions, held after install so the "updates" role's
 # `apt upgrade: full` can't drift them. Bump deliberately - check
 # https://download.docker.com/linux/ubuntu/dists/noble/stable/binary-amd64/Packages
 # (versions are noble-specific, matching the ubuntu-2404 VM template).
-docker_ce_version: "5:29.6.2-1~ubuntu.24.04~noble"
-docker_ce_cli_version: "5:29.6.2-1~ubuntu.24.04~noble"
-docker_containerd_version: "2.2.6-1~ubuntu.24.04~noble"
-docker_buildx_plugin_version: "0.35.0-1~ubuntu.24.04~noble"
-docker_compose_plugin_version: "5.3.1-1~ubuntu.24.04~noble"
+docker_install_ce_version: "5:29.6.2-1~ubuntu.24.04~noble"
+docker_install_ce_cli_version: "5:29.6.2-1~ubuntu.24.04~noble"
+docker_install_containerd_version: "2.2.6-1~ubuntu.24.04~noble"
+docker_install_buildx_plugin_version: "0.35.0-1~ubuntu.24.04~noble"
+docker_install_compose_plugin_version: "5.3.1-1~ubuntu.24.04~noble"
 
-docker_packages:
-  - "docker-ce={{ docker_ce_version }}"
-  - "docker-ce-cli={{ docker_ce_cli_version }}"
-  - "containerd.io={{ docker_containerd_version }}"
-  - "docker-buildx-plugin={{ docker_buildx_plugin_version }}"
-  - "docker-compose-plugin={{ docker_compose_plugin_version }}"
+docker_install_packages:
+  - "docker-ce={{ docker_install_ce_version }}"
+  - "docker-ce-cli={{ docker_install_ce_cli_version }}"
+  - "containerd.io={{ docker_install_containerd_version }}"
+  - "docker-buildx-plugin={{ docker_install_buildx_plugin_version }}"
+  - "docker-compose-plugin={{ docker_install_compose_plugin_version }}"
 
-docker_package_names:
+docker_install_package_names:
   - docker-ce
   - docker-ce-cli
   - containerd.io

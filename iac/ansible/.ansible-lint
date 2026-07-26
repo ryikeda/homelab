@@ -5,8 +5,3 @@ exclude_paths:
   - collections/
   - .venv/
   - .ansible/
-
-skip_list:
-  # Pre-existing repo-wide convention (vars not prefixed with their role
-  # name); a deliberate future cleanup, not something CI should block on.
-  - var-naming[no-role-prefix]

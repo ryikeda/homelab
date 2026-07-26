@@ -1,36 +1,36 @@
 ---
 - name: Ensure the pve-exporter token file exists
   ansible.builtin.stat:
-    path: "{{ pve_exporter_token_file }}"
+    path: "{{ pve_exporter_install_token_file }}"
   delegate_to: localhost
   become: false
-  register: pve_exporter_token_file_stat
+  register: pve_exporter_install_token_file_stat
 
 - name: Fail if the token hasn't been minted yet
   ansible.builtin.fail:
     msg: >-
-      {{ pve_exporter_token_file }} doesn't exist - run playbooks/proxmox.yml
-      first (proxmox_pve_exporter_user mints this token, pve_exporter_manage_user
+      {{ pve_exporter_install_token_file }} doesn't exist - run playbooks/proxmox.yml
+      first (proxmox_pve_exporter_user mints this token, proxmox_pve_exporter_user_manage_user
       must be true in group_vars/proxmox.yml).
-  when: not pve_exporter_token_file_stat.stat.exists
+  when: not pve_exporter_install_token_file_stat.stat.exists
 
 - name: Read the pve-exporter token file
   ansible.builtin.set_fact:
-    pve_exporter_token_lines: "{{ lookup('file', pve_exporter_token_file).splitlines() | reject('match', '^#') | list }}"
+    pve_exporter_install_token_lines: "{{ lookup('file', pve_exporter_install_token_file).splitlines() | reject('match', '^#') | list }}"
 
 # First line is the full token id (user@realm!tokenname) - split it into
 # the plain user (PVE_USER) and token name (PVE_TOKEN_NAME), which
 # prometheus-pve-exporter wants as separate env vars.
 - name: Extract the token user, name, and value
   ansible.builtin.set_fact:
-    pve_exporter_token_user: "{{ pve_exporter_token_lines[0].split('!')[0] }}"
-    pve_exporter_token_name: "{{ pve_exporter_token_lines[0].split('!')[1] }}"
-    pve_exporter_token_value: "{{ pve_exporter_token_lines[1] }}"
+    pve_exporter_install_token_user: "{{ pve_exporter_install_token_lines[0].split('!')[0] }}"
+    pve_exporter_install_token_name: "{{ pve_exporter_install_token_lines[0].split('!')[1] }}"
+    pve_exporter_install_token_value: "{{ pve_exporter_install_token_lines[1] }}"
   no_log: true
 
 - name: Ensure the pve-exporter stack directory exists
   ansible.builtin.file:
-    path: "{{ pve_exporter_dir }}"
+    path: "{{ pve_exporter_install_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -39,15 +39,15 @@
 - name: Deploy the pve-exporter compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ pve_exporter_dir }}/compose.yaml"
+    dest: "{{ pve_exporter_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0600"
-  register: pve_exporter_compose_file
+  register: pve_exporter_install_compose_file
   no_log: true
 
 - name: Start the pve-exporter stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ pve_exporter_dir }}"
-  when: pve_exporter_compose_file.changed
+    chdir: "{{ pve_exporter_install_dir }}"
+  when: pve_exporter_install_compose_file.changed

@@ -1,6 +1,6 @@
 services:
   ollama:
-    image: ollama/ollama:{{ ollama_version }}
+    image: ollama/ollama:{{ ollama_install_version }}
     restart: unless-stopped
     ports:
       - "{{ ollama_port }}:11434"

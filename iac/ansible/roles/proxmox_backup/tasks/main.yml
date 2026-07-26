@@ -24,6 +24,7 @@
       register: proxmox_backup_showmount
       changed_when: false
       failed_when: false
+      check_mode: false
 
     - name: Warn if the NFS export couldn't be confirmed
       ansible.builtin.debug:
@@ -40,6 +41,7 @@
       ansible.builtin.command: pvesm status
       register: proxmox_backup_storage_status
       changed_when: false
+      check_mode: false
 
     - name: Register the NFS storage for backups
       ansible.builtin.command:
@@ -67,6 +69,7 @@
       - json
   register: proxmox_backup_job_list
   changed_when: false
+  check_mode: false
   when: proxmox_backup_manage | bool
 
 - name: Manage each configured backup job

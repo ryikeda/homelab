@@ -1,10 +1,10 @@
 ---
 # Bump deliberately - check https://github.com/prometheus/node_exporter/releases.
-node_exporter_version: "1.12.1"
+node_exporter_install_version: "1.12.1"
 
-node_exporter_binary_path: /usr/local/bin/node_exporter
-node_exporter_version_marker: /usr/local/lib/node_exporter-install-version
-node_exporter_port: 9100
+node_exporter_install_binary_path: /usr/local/bin/node_exporter
+node_exporter_install_version_marker: /usr/local/lib/node_exporter-install-version
+node_exporter_install_port: 9100
 
-node_exporter_user: node_exporter
-node_exporter_group: node_exporter
+node_exporter_install_user: node_exporter
+node_exporter_install_group: node_exporter

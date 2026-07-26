@@ -1,19 +1,19 @@
 ---
-pve_exporter_manage_user: false
+proxmox_pve_exporter_user_manage_user: false
 
-pve_exporter_user_name: pve-exporter
-pve_exporter_user_realm: pve
-pve_exporter_user_id: "{{ pve_exporter_user_name }}@{{ pve_exporter_user_realm }}"
-pve_exporter_user_comment: "prometheus-pve-exporter read-only monitoring user"
+proxmox_pve_exporter_user_name: pve-exporter
+proxmox_pve_exporter_user_realm: pve
+proxmox_pve_exporter_user_id: "{{ proxmox_pve_exporter_user_name }}@{{ proxmox_pve_exporter_user_realm }}"
+proxmox_pve_exporter_user_comment: "prometheus-pve-exporter read-only monitoring user"
 
 # Built-in read-only role - unlike proxmox_opentofu_user, no custom role
 # needs creating/maintaining here.
-pve_exporter_role_name: PVEAuditor
-pve_exporter_acl_path: /
+proxmox_pve_exporter_user_role_name: PVEAuditor
+proxmox_pve_exporter_user_acl_path: /
 
-pve_exporter_token_name: exporter
+proxmox_pve_exporter_user_token_name: exporter
 # false = --privsep 0, the token inherits the user's ACL (same default
 # reasoning as proxmox_opentofu_user).
-pve_exporter_token_privsep: false
-pve_exporter_token_output_dir: "{{ lookup('env', 'HOME') }}/.proxmox"
-pve_exporter_token_output_path: "{{ pve_exporter_token_output_dir }}/pve-exporter.env"
+proxmox_pve_exporter_user_token_privsep: false
+proxmox_pve_exporter_user_token_output_dir: "{{ lookup('env', 'HOME') }}/.proxmox"
+proxmox_pve_exporter_user_token_output_path: "{{ proxmox_pve_exporter_user_token_output_dir }}/pve-exporter.env"

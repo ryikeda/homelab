@@ -1,7 +1,7 @@
 ---
 - name: Ensure the nvidia-gpu-exporter stack directory exists
   ansible.builtin.file:
-    path: "{{ nvidia_gpu_exporter_dir }}"
+    path: "{{ nvidia_gpu_exporter_install_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -10,14 +10,14 @@
 - name: Deploy the nvidia-gpu-exporter compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ nvidia_gpu_exporter_dir }}/compose.yaml"
+    dest: "{{ nvidia_gpu_exporter_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: nvidia_gpu_exporter_compose_file
+  register: nvidia_gpu_exporter_install_compose_file
 
 - name: Start the nvidia-gpu-exporter stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ nvidia_gpu_exporter_dir }}"
-  when: nvidia_gpu_exporter_compose_file.changed
+    chdir: "{{ nvidia_gpu_exporter_install_dir }}"
+  when: nvidia_gpu_exporter_install_compose_file.changed

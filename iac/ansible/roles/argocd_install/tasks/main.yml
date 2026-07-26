@@ -1,8 +1,8 @@
 ---
 - name: Add the Argo CD Helm repo
   ansible.builtin.command: helm repo add argo https://argoproj.github.io/argo-helm
-  register: argocd_helm_repo_add
-  changed_when: "'already exists' not in argocd_helm_repo_add.stdout"
+  register: argocd_install_helm_repo_add
+  changed_when: "'already exists' not in argocd_install_helm_repo_add.stdout"
 
 - name: Update the Argo CD Helm repo
   ansible.builtin.command: helm repo update argo
@@ -11,12 +11,12 @@
 - name: Install or upgrade the Argo CD Helm release
   ansible.builtin.command: >-
     helm upgrade --install argocd argo/argo-cd
-    --namespace {{ argocd_namespace }}
+    --namespace {{ argocd_install_namespace }}
     --create-namespace
-    --version {{ argocd_chart_version }}
+    --version {{ argocd_install_chart_version }}
     --set server.service.type=NodePort
-    --set server.service.nodePortHttp={{ argocd_nodeport_http }}
-    --set server.service.nodePortHttps={{ argocd_nodeport_https }}
+    --set server.service.nodePortHttp={{ argocd_install_nodeport_http }}
+    --set server.service.nodePortHttps={{ argocd_install_nodeport_https }}
     --wait
   environment:
     KUBECONFIG: "{{ k3s_kubeconfig_path }}"

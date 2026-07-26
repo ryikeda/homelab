@@ -1,11 +1,11 @@
 ---
 # Bump deliberately - check
 # https://github.com/prometheus-pve/prometheus-pve-exporter/releases.
-pve_exporter_version: "3.9.0"
+pve_exporter_install_version: "3.9.0"
 
-pve_exporter_dir: "{{ docker_stacks_dir }}/pve-exporter"
+pve_exporter_install_dir: "{{ docker_stacks_dir }}/pve-exporter"
 
 # Written by proxmox_pve_exporter_user (playbooks/proxmox.yml) on the
 # controller - two bare lines: full token id (user@realm!tokenname), then
 # the secret token value.
-pve_exporter_token_file: "{{ lookup('env', 'HOME') }}/.proxmox/pve-exporter.env"
+pve_exporter_install_token_file: "{{ lookup('env', 'HOME') }}/.proxmox/pve-exporter.env"

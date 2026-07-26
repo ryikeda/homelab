@@ -14,16 +14,19 @@
       ansible.builtin.command: pvs --noheadings -o pv_name
       register: proxmox_storage_pv_raw
       changed_when: false
+      check_mode: false
 
     - name: Check existing LVM volume groups
       ansible.builtin.command: vgs --noheadings -o vg_name
       register: proxmox_storage_vg_raw
       changed_when: false
+      check_mode: false
 
     - name: Check registered Proxmox storage
       ansible.builtin.command: pvesm status
       register: proxmox_storage_status
       changed_when: false
+      check_mode: false
 
     - name: Record known physical volumes and volume groups
       ansible.builtin.set_fact:
@@ -35,6 +38,7 @@
       register: proxmox_storage_blkid
       changed_when: false
       failed_when: false
+      check_mode: false
       loop: "{{ proxmox_storage_disks }}"
       loop_control:
         label: "{{ item.device }}"
@@ -110,6 +114,7 @@
           - json
       register: proxmox_storage_content_current
       changed_when: false
+      check_mode: false
       loop: "{{ proxmox_storage_content | dict2items }}"
       loop_control:
         label: "{{ item.key }}"

@@ -1,9 +1,9 @@
 services:
   cadvisor:
-    image: ghcr.io/google/cadvisor:{{ cadvisor_version }}
+    image: ghcr.io/google/cadvisor:{{ cadvisor_install_version }}
     restart: unless-stopped
     ports:
-      - "{{ cadvisor_port }}:8080"
+      - "{{ cadvisor_install_port }}:8080"
     # Privileged + these mounts are cAdvisor's own documented requirement -
     # it needs deep read access to the host's filesystem/cgroups/kernel
     # messages to report accurate per-container resource usage.

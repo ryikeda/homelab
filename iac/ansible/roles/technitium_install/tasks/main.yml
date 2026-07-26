@@ -2,7 +2,7 @@
 - name: Check if Technitium DNS Server is already installed
   ansible.builtin.stat:
     path: /etc/systemd/system/dns.service
-  register: technitium_installed
+  register: technitium_install_installed
 
 # Technitium has no apt repo; this is their own official install method.
 # See: https://technitium.com/dns/
@@ -12,7 +12,7 @@
     curl -sSL https://download.technitium.com/dns/install.sh | bash
   args:
     executable: /bin/bash
-  when: not technitium_installed.stat.exists
+  when: not technitium_install_installed.stat.exists
 
 - name: Ensure Technitium DNS service is enabled and running
   ansible.builtin.systemd:
