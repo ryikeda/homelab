@@ -1,12 +1,12 @@
 # homepage
 
-[Homepage](https://gethomepage.dev/) dashboard, deployed as a Helm chart via `../apps/homepage.yaml`. NodePort `30081` (see `values.yaml`), reachable at `homepage.<local_domain>` through the existing Traefik LXC (`reverse_proxy_sites.yml`).
+[Homepage](https://gethomepage.dev/) dashboard, deployed as a Helm chart via `../apps/homepage.yaml`. `ClusterIP` Service, routed to by the in-cluster Traefik ingress controller (`templates/ingressroute.yaml`, `../apps/ingress-controller.yaml`) via `HostRegexp` on the `homepage.` subdomain prefix - reachable at `homepage.<local_domain>` through the existing Traefik LXC (`reverse_proxy_sites.yml`), which forwards to the ingress controller's MetalLB IP.
 
 ## The domain Secret
 
 This repo is public - the real domain doesn't live in any committed file. `templates/deployment.yaml` reads it from a Secret named `homepage-domain` instead.
 
-That Secret is sealed with [Sealed Secrets](https://github.com/bitnami/sealed-secrets) (`iac/ansible/playbooks/sealed_secrets_install.yml` - install that first, see the ansible README) rather than applied out-of-band: encrypt it once with `kubeseal`, commit the encrypted `SealedSecret` to git, and the in-cluster controller decrypts it back into a real Secret. Only the controller's private key (never leaves the cluster) can do that, so the committed file is safe in a public repo.
+That Secret is sealed with [Sealed Secrets](https://github.com/bitnami/sealed-secrets) (`iac/argocd/apps/sealed-secrets.yaml` - install that first) rather than applied out-of-band: encrypt it once with `kubeseal`, commit the encrypted `SealedSecret` to git, and the in-cluster controller decrypts it back into a real Secret. Only the controller's private key (never leaves the cluster) can do that, so the committed file is safe in a public repo.
 
 ```sh
 kubectl create secret generic homepage-domain \

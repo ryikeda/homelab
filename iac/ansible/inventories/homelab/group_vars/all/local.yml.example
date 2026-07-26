@@ -22,6 +22,21 @@ opnsense_lan_dhcp_end: 192.0.2.200
 opnsense_iot_dhcp_start: 192.0.2.100
 opnsense_iot_dhcp_end: 192.0.2.200
 
+# Pool MetalLB hands out as stable Service IPs - clear of DHCP and the
+# static hosts above. See roles/metallb_install. Just one address for now
+# - the in-cluster ingress controller is the only LoadBalancer-type
+# Service (everything else routes through it via IngressRoute/HostRegexp).
+# Widen this later (edit + re-apply metallb_install.yml, no reinstall
+# needed) if something ever needs its own direct LoadBalancer IP.
+metallb_install_ip_range: "192.0.2.60/32"
+
+# The in-cluster Traefik ingress controller's MetalLB-assigned IP (see
+# iac/argocd/apps/ingress-controller.yaml) - not knowable ahead of time,
+# fill this in after the first deploy: `kubectl get svc -n
+# ingress-controller`. Used by reverse_proxy_sites.yml as the upstream
+# for all k8s-hosted hostnames.
+k8s_ingress_lb_ip: "192.0.2.60"
+
 technitium_host: 192.0.2.53
 # API token itself lives in ~/.technitium/ansible.env, not here.
 

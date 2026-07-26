@@ -1,0 +1,44 @@
+---
+- name: Add the MetalLB Helm repo
+  ansible.builtin.command: helm repo add metallb https://metallb.github.io/metallb
+  register: metallb_install_helm_repo_add
+  changed_when: "'already exists' not in metallb_install_helm_repo_add.stdout"
+
+- name: Update the MetalLB Helm repo
+  ansible.builtin.command: helm repo update metallb
+  changed_when: true
+
+- name: Install or upgrade the MetalLB Helm release
+  ansible.builtin.command: >-
+    helm upgrade --install metallb metallb/metallb
+    --namespace {{ metallb_install_namespace }}
+    --create-namespace
+    --version {{ metallb_install_chart_version }}
+    --wait
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  changed_when: true
+
+- name: Render the MetalLB IPAddressPool/L2Advertisement manifest
+  ansible.builtin.template:
+    src: ipaddresspool.yaml.j2
+    dest: /tmp/metallb-pool.yaml
+    mode: "0644"
+
+# The validating webhook comes up slightly after `helm --wait` reports the
+# controller deployment ready, so the first apply can transiently fail -
+# retry rather than race it.
+- name: Apply the MetalLB IPAddressPool/L2Advertisement manifest
+  ansible.builtin.command: kubectl apply -f /tmp/metallb-pool.yaml
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  register: metallb_install_pool_apply
+  changed_when: true
+  retries: 5
+  delay: 5
+  until: metallb_install_pool_apply.rc == 0
+
+- name: Remove the rendered manifest
+  ansible.builtin.file:
+    path: /tmp/metallb-pool.yaml
+    state: absent

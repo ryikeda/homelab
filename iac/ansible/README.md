@@ -404,15 +404,25 @@ Swap `127.0.0.1` in that file for the control-plane's real IP before using it fr
 
 Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/`maintenance` playbooks all include the `kubernetes` group already. Not yet added to `reboot.yml`/`shutdown.yml` (no drain/cordon logic - see docs/k3s-cluster-plan.md's Explicitly deferred section).
 
+### MetalLB (`metallb_install`)
+
+`playbooks/metallb_install.yml`, run against `prod_control_plane` (`gondor`): `helm_install` first (shared role - version-pinned tarball + version-marker idiom, same as `node_exporter_install`), then `helm upgrade --install`s the `metallb/metallb` chart into `metallb-system`, then applies an `IPAddressPool`/`L2Advertisement` pair (L2/ARP mode - no BGP-speaking router here) built from `metallb_install_ip_range` (`group_vars/all/local.yml`, real LAN addresses, gitignored - never committed).
+
+```sh
+ansible-playbook playbooks/metallb_install.yml
+```
+
+This is what makes `type: LoadBalancer` Services actually get a real, stable LAN IP on bare metal instead of sitting in `Pending` forever - there's no cloud controller manager to provision one the way GKE/EKS/etc. would. Install this before `argocd_install` or the GitOps-managed ingress controller (`iac/argocd/apps/ingress-controller.yaml`), since both depend on it.
+
 ### Argo CD (`argocd_install`)
 
-`playbooks/argocd_install.yml`, run against `prod_control_plane` (`gondor`): `helm_install` first (shared role - version-pinned tarball + version-marker idiom, same as `node_exporter_install`; also used by `sealed_secrets_install` below), then `helm upgrade --install`s the `argo/argo-cd` chart into the `argocd` namespace, using `gondor`'s own `/etc/rancher/k3s/k3s.yaml` (`k3s_kubeconfig_path`, `group_vars/kubernetes.yml`) as `KUBECONFIG` - no external credential needed since it's managing the cluster it runs in ("in-cluster" destination).
+`playbooks/argocd_install.yml`, run against `prod_control_plane` (`gondor`): `helm_install` first, then `helm upgrade --install`s the `argo/argo-cd` chart into the `argocd` namespace, using `gondor`'s own `/etc/rancher/k3s/k3s.yaml` (`k3s_kubeconfig_path`, `group_vars/kubernetes.yml`) as `KUBECONFIG` - no external credential needed since it's managing the cluster it runs in ("in-cluster" destination). Argo CD stays Ansible-installed rather than self-managed via GitOps - it can't deploy itself before it exists, and self-management is a known foot-gun (a bad self-managed change can break the very tool that would fix it); this keeps it as a deliberate, debuggable "break glass" install.
 
 ```sh
 ansible-playbook playbooks/argocd_install.yml
 ```
 
-**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `server.service.type=NodePort` (fixed at `30443`), and `traefik_install_reverse_proxy_sites.yml` points Traefik at `https://{{ gondor_host }}:30443` with `insecure_skip_verify` (Argo CD's own self-signed cert on that port - same pattern as `pve.<local_domain>`'s Proxmox backend). NodePort, not the deferred MetalLB/Ingress-controller work - a fixed port on the cluster's own nodes, not a LoadBalancer implementation.
+**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `configs.params."server\.insecure"=true` (serves plain HTTP internally - the LXC already terminates real TLS at the edge) and the role applies a static `IngressRoute` (`files/argocd-ingressroute.yaml`) matching `HostRegexp(`^argocd\..+$`)` on the in-cluster Traefik ingress controller (see `iac/argocd/apps/ingress-controller.yaml`). `traefik_install_reverse_proxy_sites.yml` points Traefik at `http://{{ k8s_ingress_lb_ip }}` (the ingress controller's MetalLB-assigned IP) - same upstream homepage uses, disambiguated by `Host` header, not a per-service NodePort/IP anymore.
 
 Login itself stays manual/interactive - the initial admin password:
 
@@ -420,14 +430,8 @@ Login itself stays manual/interactive - the initial admin password:
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
 ```
 
-### Sealed Secrets (`sealed_secrets_install`)
+### Sealed Secrets
 
-`playbooks/sealed_secrets_install.yml`, run against `prod_control_plane` (`gondor`): same shape as `argocd_install` (`helm_install` first, then `helm upgrade --install`s the `sealed-secrets/sealed-secrets` chart, pinned, into `kube-system`), `--set-string fullnameOverride=sealed-secrets-controller` so the `kubeseal` CLI's own defaults (controller name + namespace) just work without extra flags.
-
-```sh
-ansible-playbook playbooks/sealed_secrets_install.yml
-```
-
-This is how secrets get into `iac/argocd/` despite the repo being public: `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/argocd/homepage/README.md` for a worked example (the `homepage-domain` secret).
+Moved to GitOps (`iac/argocd/apps/sealed-secrets.yaml`) - no bootstrap dependency like Argo CD has, so there's no reason to keep it Ansible-managed. `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/argocd/homepage/README.md` for a worked example (the `homepage-domain` secret).
 
 GitOps manifests live at `iac/argocd/` (own README there) - first workload deployed is `homepage` (see `iac/argocd/homepage/`). `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.

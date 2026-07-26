@@ -1,0 +1,11 @@
+---
+metallb_install_namespace: metallb-system
+
+# Bump deliberately - check https://artifacthub.io/packages/helm/metallb/metallb
+# for the current chart version.
+metallb_install_chart_version: "0.14.9"
+
+# Name of the IPAddressPool/L2Advertisement pair this role manages.
+# metallb_install_ip_range (the actual LAN addresses) lives in local.yml,
+# not here - it's real network topology, not something to publish.
+metallb_install_ip_pool_name: homelab
