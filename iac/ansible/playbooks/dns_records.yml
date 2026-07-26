@@ -2,6 +2,9 @@
 # Converges the declared list of known/stable DNS records (technitium_dns_records,
 # see group_vars/all/dns_records.yml). For a single ad-hoc record - e.g. a
 # newly-provisioned VM with a DHCP-assigned IP - use dns_record.yml instead.
+#
+# The declared list is treated as authoritative: any A record in the zone
+# that isn't in it gets deleted below.
 - name: Converge declared DNS records in Technitium
   hosts: localhost
   connection: local
@@ -18,3 +21,53 @@
       vars:
         dns_name: "{{ record.name }}"
         dns_ip: "{{ record.ip }}"
+
+    - name: Fetch every record currently in the zone
+      ansible.builtin.uri:
+        url: "http://{{ technitium_host }}:5380/api/zones/records/get?domain={{ local_domain | urlencode }}&zone={{ local_domain | urlencode }}&listZone=true"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ technitium_api_token }}"
+        status_code: 200
+      register: technitium_zone_records
+
+    - name: Determine which A records are no longer declared
+      ansible.builtin.set_fact:
+        technitium_stale_records: >-
+          {{
+            technitium_zone_records.json.response.records
+            | selectattr('type', 'equalto', 'A')
+            | rejectattr('name', 'in', technitium_dns_records | map(attribute='name') | list)
+            | list
+          }}
+
+    - name: Report records about to be pruned
+      ansible.builtin.debug:
+        msg: "Pruning stale A record: {{ item.name }} -> {{ item.rData.ipAddress }}"
+      loop: "{{ technitium_stale_records }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Delete stale A records no longer declared
+      vars:
+        technitium_query: "domain={{ item.name | urlencode }}&zone={{ local_domain | urlencode }}&type=A&ipAddress={{ item.rData.ipAddress | urlencode }}"
+      ansible.builtin.uri:
+        url: "http://{{ technitium_host }}:5380/api/zones/records/delete?{{ technitium_query }}"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ technitium_api_token }}"
+        status_code: 200
+      loop: "{{ technitium_stale_records }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: technitium_delete_response
+      changed_when: true
+
+    - name: Fail if Technitium reported a delete error
+      ansible.builtin.assert:
+        that: item.json.status == 'ok'
+        fail_msg: "{{ item.json | to_json }}"
+      loop: "{{ technitium_delete_response.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      when: technitium_delete_response.results is defined
