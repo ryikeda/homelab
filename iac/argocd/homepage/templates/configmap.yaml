@@ -79,6 +79,15 @@ data:
             href: "https://argocd.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             ping: "https://argocd.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
             description: GitOps for the k3s cluster
+        - CloudBeaver:
+            icon: cloudbeaver.svg
+            href: "https://cloudbeaver.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://cloudbeaver.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            description: Postgres/MongoDB admin UI
+        - SeaweedFS:
+            href: "https://seaweedfs.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            ping: "https://seaweedfs.{{ `{{HOMEPAGE_VAR_DOMAIN}}` }}"
+            description: S3-compatible object storage
     - Monitoring:
         - Grafana:
             icon: grafana.svg
