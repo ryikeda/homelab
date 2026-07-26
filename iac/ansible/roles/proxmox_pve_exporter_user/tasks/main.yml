@@ -1,10 +1,11 @@
 ---
 - name: Check whether Proxmox user management is available
   ansible.builtin.command: pveum user list
-  register: pve_exporter_user_list
+  register: proxmox_pve_exporter_user_list
   changed_when: false
   failed_when: false
-  when: pve_exporter_manage_user | bool
+  check_mode: false
+  when: proxmox_pve_exporter_user_manage_user | bool
 
 - name: Register the pve-exporter user in Proxmox authentication
   ansible.builtin.command:
@@ -12,18 +13,18 @@
       - pveum
       - user
       - add
-      - "{{ pve_exporter_user_id }}"
+      - "{{ proxmox_pve_exporter_user_id }}"
       - --comment
-      - "{{ pve_exporter_user_comment }}"
-  register: pve_exporter_user_add
-  changed_when: pve_exporter_user_add.rc == 0
+      - "{{ proxmox_pve_exporter_user_comment }}"
+  register: proxmox_pve_exporter_user_add
+  changed_when: proxmox_pve_exporter_user_add.rc == 0
   failed_when:
-    - pve_exporter_user_add.rc != 0
-    - "'already exists' not in pve_exporter_user_add.stderr"
+    - proxmox_pve_exporter_user_add.rc != 0
+    - "'already exists' not in proxmox_pve_exporter_user_add.stderr"
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_user_list.rc == 0
-    - pve_exporter_user_id not in pve_exporter_user_list.stdout
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_list.rc == 0
+    - proxmox_pve_exporter_user_id not in proxmox_pve_exporter_user_list.stdout
 
 - name: Read Proxmox access control list
   ansible.builtin.command:
@@ -33,46 +34,47 @@
       - list
       - --output-format
       - json
-  register: pve_exporter_acl_list
+  register: proxmox_pve_exporter_user_acl_list
   changed_when: false
   failed_when: false
+  check_mode: false
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_user_list.rc == 0
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_list.rc == 0
 
 - name: Check whether the pve-exporter ACL already exists
   ansible.builtin.set_fact:
-    pve_exporter_acl_exists: >-
+    proxmox_pve_exporter_user_acl_exists: >-
       {{
         (
-          pve_exporter_acl_list.stdout | default('[]') | from_json
-          | selectattr('path', 'equalto', pve_exporter_acl_path)
-          | selectattr('ugid', 'equalto', pve_exporter_user_id)
-          | selectattr('roleid', 'equalto', pve_exporter_role_name)
+          proxmox_pve_exporter_user_acl_list.stdout | default('[]') | from_json
+          | selectattr('path', 'equalto', proxmox_pve_exporter_user_acl_path)
+          | selectattr('ugid', 'equalto', proxmox_pve_exporter_user_id)
+          | selectattr('roleid', 'equalto', proxmox_pve_exporter_user_role_name)
           | list
           | length
         ) > 0
       }}
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_acl_list.rc == 0
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_acl_list.rc == 0
 
 - name: Grant the PVEAuditor role to the pve-exporter user
   ansible.builtin.command:
     argv:
       - pveum
       - aclmod
-      - "{{ pve_exporter_acl_path }}"
+      - "{{ proxmox_pve_exporter_user_acl_path }}"
       - --users
-      - "{{ pve_exporter_user_id }}"
+      - "{{ proxmox_pve_exporter_user_id }}"
       - --roles
-      - "{{ pve_exporter_role_name }}"
-  register: pve_exporter_acl_grant
-  changed_when: pve_exporter_acl_grant.rc == 0
+      - "{{ proxmox_pve_exporter_user_role_name }}"
+  register: proxmox_pve_exporter_user_acl_grant
+  changed_when: proxmox_pve_exporter_user_acl_grant.rc == 0
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_acl_list.rc == 0
-    - not pve_exporter_acl_exists | default(false)
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_acl_list.rc == 0
+    - not proxmox_pve_exporter_user_acl_exists | default(false)
 
 - name: Check existing API tokens for the pve-exporter user
   ansible.builtin.command:
@@ -81,28 +83,29 @@
       - user
       - token
       - list
-      - "{{ pve_exporter_user_id }}"
+      - "{{ proxmox_pve_exporter_user_id }}"
       - --output-format
       - json
-  register: pve_exporter_token_list
+  register: proxmox_pve_exporter_user_token_list
   changed_when: false
   failed_when: false
-  when: pve_exporter_manage_user | bool
+  check_mode: false
+  when: proxmox_pve_exporter_user_manage_user | bool
 
 - name: Determine whether the pve-exporter API token already exists
   ansible.builtin.set_fact:
-    pve_exporter_token_exists: >-
+    proxmox_pve_exporter_user_token_exists: >-
       {{
         (
-          pve_exporter_token_list.stdout | default('[]') | from_json
-          | selectattr('tokenid', 'equalto', pve_exporter_token_name)
+          proxmox_pve_exporter_user_token_list.stdout | default('[]') | from_json
+          | selectattr('tokenid', 'equalto', proxmox_pve_exporter_user_token_name)
           | list
           | length
         ) > 0
       }}
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_token_list.rc == 0
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_token_list.rc == 0
 
 - name: Create the pve-exporter API token
   ansible.builtin.command:
@@ -111,31 +114,31 @@
       - user
       - token
       - add
-      - "{{ pve_exporter_user_id }}"
-      - "{{ pve_exporter_token_name }}"
+      - "{{ proxmox_pve_exporter_user_id }}"
+      - "{{ proxmox_pve_exporter_user_token_name }}"
       - --privsep
-      - "{{ pve_exporter_token_privsep | ternary('1', '0') }}"
+      - "{{ proxmox_pve_exporter_user_token_privsep | ternary('1', '0') }}"
       - --output-format
       - json
-  register: pve_exporter_token_add
-  changed_when: pve_exporter_token_add.rc == 0
+  register: proxmox_pve_exporter_user_token_add
+  changed_when: proxmox_pve_exporter_user_token_add.rc == 0
   no_log: true
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_token_list.rc == 0
-    - not pve_exporter_token_exists | default(false)
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_token_list.rc == 0
+    - not proxmox_pve_exporter_user_token_exists | default(false)
 
 - name: Ensure local secrets directory exists
   ansible.builtin.file:
-    path: "{{ pve_exporter_token_output_dir }}"
+    path: "{{ proxmox_pve_exporter_user_token_output_dir }}"
     state: directory
     mode: "0700"
   delegate_to: localhost
   become: false
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_token_add is not skipped
-    - pve_exporter_token_add.rc == 0
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_token_add is not skipped
+    - proxmox_pve_exporter_user_token_add.rc == 0
 
 # Two bare lines (full token id, then the secret value) - deliberately not
 # the same KEY=VALUE .env shape as opentofu.env, since pve_exporter_install
@@ -143,30 +146,30 @@
 # shell env vars.
 - name: Save the newly created pve-exporter API token locally
   ansible.builtin.copy:
-    dest: "{{ pve_exporter_token_output_path }}"
+    dest: "{{ proxmox_pve_exporter_user_token_output_path }}"
     content: |
       # Generated by the proxmox_pve_exporter_user Ansible role on {{ inventory_hostname }}. Do not commit.
       # Proxmox only reveals this token value once; if this file is lost, re-run the
-      # role with a new pve_exporter_token_name to mint a replacement token.
-      {{ (pve_exporter_token_add.stdout | from_json)['full-tokenid'] }}
-      {{ (pve_exporter_token_add.stdout | from_json).value }}
+      # role with a new proxmox_pve_exporter_user_token_name to mint a replacement token.
+      {{ (proxmox_pve_exporter_user_token_add.stdout | from_json)['full-tokenid'] }}
+      {{ (proxmox_pve_exporter_user_token_add.stdout | from_json).value }}
     mode: "0600"
   delegate_to: localhost
   become: false
   no_log: true
   when:
-    - pve_exporter_manage_user | bool
-    - pve_exporter_token_add is not skipped
-    - pve_exporter_token_add.rc == 0
+    - proxmox_pve_exporter_user_manage_user | bool
+    - proxmox_pve_exporter_user_token_add is not skipped
+    - proxmox_pve_exporter_user_token_add.rc == 0
 
 - name: Report pve-exporter user status
   ansible.builtin.debug:
     msg: >-
-      pve-exporter user {{ pve_exporter_user_id }} is present with role {{ pve_exporter_role_name }}.
+      pve-exporter user {{ proxmox_pve_exporter_user_id }} is present with role {{ proxmox_pve_exporter_user_role_name }}.
       {{
-        ('A new API token was generated and saved to ' + pve_exporter_token_output_path + '.')
-        if (pve_exporter_token_add is not skipped and pve_exporter_token_add.rc == 0)
-        else ('An API token already exists for this user; run `pveum user token list ' + pve_exporter_user_id +
+        ('A new API token was generated and saved to ' + proxmox_pve_exporter_user_token_output_path + '.')
+        if (proxmox_pve_exporter_user_token_add is not skipped and proxmox_pve_exporter_user_token_add.rc == 0)
+        else ('An API token already exists for this user; run `pveum user token list ' + proxmox_pve_exporter_user_id +
           '` on the host to inspect it, or delete it there to have this role mint a replacement.')
       }}
-  when: pve_exporter_manage_user | bool
+  when: proxmox_pve_exporter_user_manage_user | bool

@@ -11,24 +11,24 @@
 # on it fails with EROFS.
 - name: Ensure the NAS mount point exists
   ansible.builtin.file:
-    path: "{{ jellyfin_nas_mount_point }}"
+    path: "{{ jellyfin_install_nas_mount_point }}"
     state: directory
     mode: "0755"
-  when: jellyfin_nas_mount_point not in (ansible_facts.mounts | map(attribute='mount') | list)
+  when: jellyfin_install_nas_mount_point not in (ansible_facts.mounts | map(attribute='mount') | list)
 
 # Read-only - Jellyfin only ever needs to read media, never write into the
 # NAS share. nofail so a NAS hiccup at boot doesn't hang gpu-box's startup.
 - name: Mount the Jellyfin media export from the NAS
   ansible.posix.mount:
-    path: "{{ jellyfin_nas_mount_point }}"
-    src: "{{ nas_backup_server }}:{{ jellyfin_nas_export }}"
+    path: "{{ jellyfin_install_nas_mount_point }}"
+    src: "{{ nas_backup_server }}:{{ jellyfin_install_nas_export }}"
     fstype: nfs
     opts: ro,_netdev,nofail
     state: mounted
 
 - name: Ensure the Jellyfin stack directory exists
   ansible.builtin.file:
-    path: "{{ jellyfin_dir }}"
+    path: "{{ jellyfin_install_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -39,7 +39,7 @@
 # /config volume, one level below the mount point.
 - name: Ensure the Jellyfin nested config directory exists
   ansible.builtin.file:
-    path: "{{ jellyfin_dir }}/config/config"
+    path: "{{ jellyfin_install_dir }}/config/config"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -51,26 +51,26 @@
 - name: Deploy the Jellyfin hardware acceleration config
   ansible.builtin.template:
     src: encoding.xml.j2
-    dest: "{{ jellyfin_dir }}/config/config/encoding.xml"
+    dest: "{{ jellyfin_install_dir }}/config/config/encoding.xml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: jellyfin_encoding_config
+  register: jellyfin_install_encoding_config
 
 - name: Deploy the Jellyfin compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ jellyfin_dir }}/compose.yaml"
+    dest: "{{ jellyfin_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: jellyfin_compose_file
+  register: jellyfin_install_compose_file
 
 - name: Start the Jellyfin stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ jellyfin_dir }}"
-  when: jellyfin_compose_file.changed
+    chdir: "{{ jellyfin_install_dir }}"
+  when: jellyfin_install_compose_file.changed
 
 # Jellyfin only reads encoding.xml at startup, not on file change - restart
 # to pick it up. Skipped when `up -d` above already did it (compose file
@@ -78,5 +78,5 @@
 - name: Restart Jellyfin to pick up hardware acceleration config changes
   ansible.builtin.command: docker compose restart jellyfin
   args:
-    chdir: "{{ jellyfin_dir }}"
-  when: jellyfin_encoding_config.changed and not jellyfin_compose_file.changed
+    chdir: "{{ jellyfin_install_dir }}"
+  when: jellyfin_install_encoding_config.changed and not jellyfin_install_compose_file.changed

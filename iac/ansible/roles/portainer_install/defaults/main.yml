@@ -1,6 +1,6 @@
 ---
 # Bump deliberately - check https://github.com/portainer/portainer/releases.
-portainer_version: "2.39.5"
+portainer_install_version: "2.39.5"
 
-portainer_dir: "{{ docker_stacks_dir }}/portainer"
-portainer_port: 9000
+portainer_install_dir: "{{ docker_stacks_dir }}/portainer"
+portainer_install_port: 9000

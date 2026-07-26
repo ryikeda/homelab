@@ -1,14 +1,14 @@
 ---
 # Bump deliberately - check https://hub.docker.com/r/jellyfin/jellyfin/tags.
-jellyfin_version: "10.11.11"
+jellyfin_install_version: "10.11.11"
 
-jellyfin_dir: "{{ docker_stacks_dir }}/jellyfin"
+jellyfin_install_dir: "{{ docker_stacks_dir }}/jellyfin"
 
 # Media lives on the NAS, not the VM's own disk - same physical NAS as the
 # Proxmox backup target (nas_backup_server), different share.
-jellyfin_nas_export: /volume1/jellyfin
-jellyfin_nas_mount_point: /mnt/jellyfin-nas
-jellyfin_media_subpath: media
+jellyfin_install_nas_export: /volume1/jellyfin
+jellyfin_install_nas_mount_point: /mnt/jellyfin-nas
+jellyfin_install_media_subpath: media
 
 # Hardware transcoding - pre-seeds config/config/encoding.xml so the GPU is
 # actually used instead of requiring a manual Dashboard > Playback click
@@ -16,13 +16,13 @@ jellyfin_media_subpath: media
 # HEVC 8-bit both ways, HEVC 10-bit decode only (no 10-bit encode), no AV1
 # at all (Ampere+ for decode, Ada+ for encode) - see
 # https://jellyfin.org/docs/general/post-install/transcoding/hardware-acceleration/nvidia/
-jellyfin_hardware_acceleration_type: nvenc
-jellyfin_hardware_decoding_codecs:
+jellyfin_install_hardware_acceleration_type: nvenc
+jellyfin_install_hardware_decoding_codecs:
   - h264
   - hevc
   - mpeg2video
   - vc1
   - vp8
   - vp9
-jellyfin_allow_hevc_encoding: true
-jellyfin_allow_av1_encoding: false
+jellyfin_install_allow_hevc_encoding: true
+jellyfin_install_allow_av1_encoding: false

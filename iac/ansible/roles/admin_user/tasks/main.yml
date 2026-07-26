@@ -22,28 +22,28 @@
 
 - name: Check if the named local SSH key already exists
   ansible.builtin.stat:
-    path: "{{ ssh_pubkey_path }}"
+    path: "{{ admin_user_ssh_pubkey_path }}"
   delegate_to: localhost
   become: false
-  register: local_pubkey
+  register: admin_user_local_pubkey
 
 - name: Generate a new SSH key locally when no key exists
   community.crypto.openssh_keypair:
-    path: "{{ ssh_key_path }}"
+    path: "{{ admin_user_ssh_key_path }}"
     type: ed25519
     comment: "{{ admin_user_name }}@{{ inventory_hostname }}"
   delegate_to: localhost
   become: false
   when:
-    - ssh_generate_local_key | bool
-    - not local_pubkey.stat.exists
+    - admin_user_ssh_generate_local_key | bool
+    - not admin_user_local_pubkey.stat.exists
 
 - name: Re-check the public key now that it should exist
   ansible.builtin.stat:
-    path: "{{ ssh_pubkey_path }}"
+    path: "{{ admin_user_ssh_pubkey_path }}"
   delegate_to: localhost
   become: false
-  register: local_pubkey_final
+  register: admin_user_local_pubkey_final
 
 - name: Ensure .ssh directory exists for the admin user
   ansible.builtin.file:
@@ -57,8 +57,8 @@
   ansible.posix.authorized_key:
     user: "{{ admin_user_name }}"
     state: present
-    key: "{{ lookup('file', ssh_pubkey_path) }}"
-  when: local_pubkey_final.stat.exists
+    key: "{{ lookup('file', admin_user_ssh_pubkey_path) }}"
+  when: admin_user_local_pubkey_final.stat.exists
 
 - name: Grant passwordless sudo to the admin user
   ansible.builtin.copy:
@@ -73,6 +73,6 @@
 - name: Report admin user connection details
   ansible.builtin.debug:
     msg: >-
-      Admin user {{ admin_user_name }} is present. Public key used: {{ ssh_pubkey_path }}
-      {{ '(newly generated)' if not local_pubkey.stat.exists else '(already existed)' }}.
-      Connect with: ssh -i {{ ssh_key_path }} {{ admin_user_name }}@{{ ansible_host | default(inventory_hostname) }}
+      Admin user {{ admin_user_name }} is present. Public key used: {{ admin_user_ssh_pubkey_path }}
+      {{ '(newly generated)' if not admin_user_local_pubkey.stat.exists else '(already existed)' }}.
+      Connect with: ssh -i {{ admin_user_ssh_key_path }} {{ admin_user_name }}@{{ ansible_host | default(inventory_hostname) }}

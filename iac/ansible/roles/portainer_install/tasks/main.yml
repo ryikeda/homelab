@@ -1,7 +1,7 @@
 ---
 - name: Ensure the Portainer stack directory exists
   ansible.builtin.file:
-    path: "{{ portainer_dir }}"
+    path: "{{ portainer_install_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -10,14 +10,14 @@
 - name: Deploy the Portainer compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ portainer_dir }}/compose.yaml"
+    dest: "{{ portainer_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: portainer_compose_file
+  register: portainer_install_compose_file
 
 - name: Start the Portainer stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ portainer_dir }}"
-  when: portainer_compose_file.changed
+    chdir: "{{ portainer_install_dir }}"
+  when: portainer_install_compose_file.changed

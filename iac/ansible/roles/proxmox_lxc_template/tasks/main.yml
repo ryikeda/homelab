@@ -1,6 +1,6 @@
 ---
 - name: Manage LXC container templates
-  when: proxmox_lxc_templates_manage | bool
+  when: proxmox_lxc_template_templates_manage | bool
   block:
     - name: Refresh the Proxmox appliance template catalog
       ansible.builtin.command: pveam update
@@ -13,7 +13,7 @@
 
     - name: Download missing container templates
       ansible.builtin.command: pveam download {{ proxmox_lxc_template_storage }} {{ item }}
-      loop: "{{ proxmox_lxc_templates }}"
+      loop: "{{ proxmox_lxc_template_templates }}"
       loop_control:
         label: "{{ item }}"
       when: (proxmox_lxc_template_storage + ':vztmpl/' + item) not in proxmox_lxc_template_list.stdout
@@ -28,6 +28,6 @@
             if (proxmox_lxc_template_storage + ':vztmpl/' + item) in proxmox_lxc_template_list.stdout
             else 'was downloaded.'
           }}
-      loop: "{{ proxmox_lxc_templates }}"
+      loop: "{{ proxmox_lxc_template_templates }}"
       loop_control:
         label: "{{ item }}"

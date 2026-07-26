@@ -1,6 +1,6 @@
 services:
   jellyfin:
-    image: jellyfin/jellyfin:{{ jellyfin_version }}
+    image: jellyfin/jellyfin:{{ jellyfin_install_version }}
     restart: unless-stopped
     # Host networking - Jellyfin's own recommendation, needed for LAN
     # auto-discovery (DLNA/client discovery) to work correctly.
@@ -13,4 +13,4 @@ services:
     volumes:
       - ./config:/config
       - ./cache:/cache
-      - {{ jellyfin_nas_mount_point }}/{{ jellyfin_media_subpath }}:/media:ro
+      - {{ jellyfin_install_nas_mount_point }}/{{ jellyfin_install_media_subpath }}:/media:ro

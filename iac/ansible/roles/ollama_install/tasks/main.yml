@@ -1,7 +1,7 @@
 ---
 - name: Ensure the Ollama stack directory exists
   ansible.builtin.file:
-    path: "{{ ollama_dir }}"
+    path: "{{ ollama_install_dir }}"
     state: directory
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
@@ -10,26 +10,27 @@
 - name: Deploy the Ollama compose file
   ansible.builtin.template:
     src: compose.yaml.j2
-    dest: "{{ ollama_dir }}/compose.yaml"
+    dest: "{{ ollama_install_dir }}/compose.yaml"
     owner: "{{ admin_user_name }}"
     group: "{{ admin_user_name }}"
     mode: "0644"
-  register: ollama_compose_file
+  register: ollama_install_compose_file
 
 - name: Start the Ollama stack
   ansible.builtin.command: docker compose up -d
   args:
-    chdir: "{{ ollama_dir }}"
-  when: ollama_compose_file.changed
+    chdir: "{{ ollama_install_dir }}"
+  when: ollama_install_compose_file.changed
 
 - name: Wait for the Ollama API to be ready
   ansible.builtin.uri:
     url: "http://localhost:{{ ollama_port }}/api/version"
     status_code: 200
-  register: ollama_api_check
+  register: ollama_install_api_check
   retries: 10
   delay: 3
-  until: ollama_api_check.status == 200
+  until: ollama_install_api_check.status == 200
+  check_mode: false
 
 - name: Pull declared Ollama models
   ansible.builtin.uri:
@@ -50,7 +51,8 @@
     url: "http://localhost:{{ ollama_port }}/api/tags"
     method: GET
     return_content: true
-  register: ollama_installed_models
+  register: ollama_install_installed_models
+  check_mode: false
 
 - name: Remove Ollama models no longer declared
   ansible.builtin.uri:
@@ -60,6 +62,6 @@
     body:
       name: "{{ item }}"
     status_code: 200
-  loop: "{{ (ollama_installed_models.json.models | map(attribute='name') | list) | difference(ollama_models) }}"
+  loop: "{{ (ollama_install_installed_models.json.models | map(attribute='name') | list) | difference(ollama_models) }}"
   loop_control:
     label: "{{ item }}"

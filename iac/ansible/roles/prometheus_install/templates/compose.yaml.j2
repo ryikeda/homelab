@@ -1,6 +1,6 @@
 services:
   prometheus:
-    image: prom/prometheus:{{ prometheus_version }}
+    image: prom/prometheus:{{ prometheus_install_version }}
     restart: unless-stopped
     # Host networking - simplest way for Prometheus to reach every
     # exporter's port across the fleet, and to be reachable at palantir's
@@ -12,5 +12,5 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time={{ prometheus_retention }}
+      - --storage.tsdb.retention.time={{ prometheus_install_retention }}
       - --web.listen-address=:{{ prometheus_port }}

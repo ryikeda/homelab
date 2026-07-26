@@ -4,7 +4,7 @@
 # template), not a simplified shape, so anything Prometheus supports -
 # relabel_configs, metrics_path, params, etc. - can be declared directly.
 # Extend this list as new exporters come online.
-prometheus_scrape_targets:
+prometheus_install_scrape_targets:
   - job_name: node
     static_configs:
       - targets:

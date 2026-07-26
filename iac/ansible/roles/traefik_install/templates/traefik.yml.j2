@@ -13,7 +13,7 @@ certificatesResolvers:
   cloudflare:
     acme:
       email: {{ traefik_acme_email }}
-      storage: {{ traefik_data_dir }}/acme.json
+      storage: {{ traefik_install_data_dir }}/acme.json
       dnsChallenge:
         provider: cloudflare
         resolvers:
@@ -25,7 +25,7 @@ api:
 
 providers:
   file:
-    directory: {{ traefik_dynamic_config_dir }}
+    directory: {{ traefik_install_dynamic_config_dir }}
     watch: true
 
 log:

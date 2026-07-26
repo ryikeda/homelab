@@ -71,7 +71,7 @@ uv run ansible-lint
 uv run yamllint .
 ```
 
-`var-naming[no-role-prefix]` is skipped in `.ansible-lint` - most existing roles predate that convention; it's a pre-existing cleanup, not enforced yet.
+All role variables are prefixed with their defining role's name (`var-naming[no-role-prefix]`, enforced, no skip). Note `updates_reboot_timeout_seconds` (defined in `updates/defaults`) is also read directly by the separate `reboot` role - it's genuinely shared across two independent playbooks, not private to either, so `reboot`'s reference to it is intentional rather than a leftover.
 
 ## Secrets
 
@@ -159,11 +159,11 @@ This role only covers host-side prep. Two steps stay outside it, to remember whe
 
 ## VM templates
 
-`playbooks/proxmox.yml` also runs the `proxmox_vm_template` role, which downloads a cloud image and turns it into a Proxmox VM template (`qm importdisk` + a cloud-init drive + `qm template`) that OpenTofu can clone per VM. It's off by default; enable it with a `proxmox_vm_templates` list, one entry per OS:
+`playbooks/proxmox.yml` also runs the `proxmox_vm_template` role, which downloads a cloud image and turns it into a Proxmox VM template (`qm importdisk` + a cloud-init drive + `qm template`) that OpenTofu can clone per VM. It's off by default; enable it with a `proxmox_vm_template_templates` list, one entry per OS:
 
 ```yaml
-proxmox_vm_templates_manage: true
-proxmox_vm_templates:
+proxmox_vm_template_templates_manage: true
+proxmox_vm_template_templates:
   - name: ubuntu-2404
     vmid: 9000
     image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
@@ -190,9 +190,9 @@ Verify the image URLs and, where available, pin an `image_checksum` (e.g. `"sha2
 These are a different artifact from the VM templates above — an LXC container is built from a rootfs tarball (`vztmpl` content type), cloned via `pct create`/`pct clone`, not the qcow2/raw disk images `qm clone` uses. `playbooks/proxmox.yml` also runs the `proxmox_lxc_template` role for these, using Proxmox's own appliance catalog (`pveam`) instead of a raw download URL:
 
 ```yaml
-proxmox_lxc_templates_manage: true
+proxmox_lxc_template_templates_manage: true
 proxmox_lxc_template_storage: local   # must have the vztmpl content type
-proxmox_lxc_templates:
+proxmox_lxc_template_templates:
   - ubuntu-24.04-standard_24.04-1_amd64.tar.zst
 ```
 
@@ -300,7 +300,7 @@ Like OPNsense, Technitium needs a one-time manual bootstrap before Ansible can t
 
 ### Registering DNS records
 
-Most hosts now get a static IP (see `docs/network.md`), so their records are declared in `group_vars/all/dns_records.yml` (`technitium_dns_records`, matched by `name` — same list-of-dicts pattern as `reverse_proxy_sites`) and converged with:
+Most hosts now get a static IP (see `docs/network.md`), so their records are declared in `group_vars/all/dns_records.yml` (`technitium_dns_records`, matched by `name` — same list-of-dicts pattern as `traefik_install_reverse_proxy_sites`) and converged with:
 
 ```sh
 ansible-playbook playbooks/dns_records.yml
@@ -320,7 +320,7 @@ Both playbooks share `tasks/technitium_record.yml`, which calls Technitium's own
 
 ## Traefik reverse proxy
 
-`playbooks/traefik.yml` installs Traefik on the LXC container `iac/opentofu/lxc_traefik.tf` provisions. It fronts internal web UIs at clean `*.local.example.com`-style hostnames (see `local_domain`) with real Let's Encrypt certs via Cloudflare DNS-01 — this only requires Cloudflare to be authoritative for the zone, not for the hostname itself to be publicly reachable, so purely-internal names can still get valid, trusted certs. Proxied services are declared in `group_vars/all/reverse_proxy_sites.yml` (same list pattern as `technitium_dns_records`).
+`playbooks/traefik.yml` installs Traefik on the LXC container `iac/opentofu/lxc_traefik.tf` provisions. It fronts internal web UIs at clean `*.local.example.com`-style hostnames (see `local_domain`) with real Let's Encrypt certs via Cloudflare DNS-01 — this only requires Cloudflare to be authoritative for the zone, not for the hostname itself to be publicly reachable, so purely-internal names can still get valid, trusted certs. Proxied services are declared in `group_vars/all/traefik_install_reverse_proxy_sites.yml` (same list pattern as `technitium_dns_records`).
 
 Two credentials needed before running the playbook, both kept outside the repo:
 
@@ -362,16 +362,16 @@ Dockge's whole pitch is editing stacks *through its UI* - since Ansible owns the
 
 ### Jellyfin (`jellyfin_install`)
 
-Media library lives on the NAS, not the VM's own disk - mounted read-only via NFS (`ansible.posix.mount`, `ro,_netdev,nofail`: Jellyfin only ever reads media, and a NAS hiccup at boot shouldn't hang the VM). Export path and mount point are `jellyfin_nas_export`/`jellyfin_nas_mount_point` in `roles/jellyfin_install/defaults/main.yml`; confirm the actual export with `showmount -e <nas-host>` before changing it. Host networking (Jellyfin's own recommendation, needed for LAN auto-discovery), GPU passed through via the CDI syntax above, `jellyfin.<local_domain>` via Traefik.
+Media library lives on the NAS, not the VM's own disk - mounted read-only via NFS (`ansible.posix.mount`, `ro,_netdev,nofail`: Jellyfin only ever reads media, and a NAS hiccup at boot shouldn't hang the VM). Export path and mount point are `jellyfin_install_nas_export`/`jellyfin_install_nas_mount_point` in `roles/jellyfin_install/defaults/main.yml`; confirm the actual export with `showmount -e <nas-host>` before changing it. Host networking (Jellyfin's own recommendation, needed for LAN auto-discovery), GPU passed through via the CDI syntax above, `jellyfin.<local_domain>` via Traefik.
 
-Hardware transcoding is pre-seeded, not clicked through the UI: the role templates `config/config/encoding.xml` (the file Dashboard → Playback → Transcoding itself writes to) with `HardwareAccelerationType=nvenc` and the codec lists, then restarts the container so it's picked up (Jellyfin only reads it at startup). Tuned for the GTX 1060 in `vm_gpu_box.tf` - Pascal does H.264/HEVC 8-bit both ways, HEVC 10-bit decode only, no AV1 at all - via `jellyfin_hardware_acceleration_type`/`jellyfin_hardware_decoding_codecs`/`jellyfin_allow_hevc_encoding`/`jellyfin_allow_av1_encoding` in `roles/jellyfin_install/defaults/main.yml`. Swap the GPU and these need revisiting.
+Hardware transcoding is pre-seeded, not clicked through the UI: the role templates `config/config/encoding.xml` (the file Dashboard → Playback → Transcoding itself writes to) with `HardwareAccelerationType=nvenc` and the codec lists, then restarts the container so it's picked up (Jellyfin only reads it at startup). Tuned for the GTX 1060 in `vm_gpu_box.tf` - Pascal does H.264/HEVC 8-bit both ways, HEVC 10-bit decode only, no AV1 at all - via `jellyfin_install_hardware_acceleration_type`/`jellyfin_install_hardware_decoding_codecs`/`jellyfin_install_allow_hevc_encoding`/`jellyfin_install_allow_av1_encoding` in `roles/jellyfin_install/defaults/main.yml`. Swap the GPU and these need revisiting.
 
 One thing stays manual, inherently interactive and not worth scripting for a single-admin homelab:
 1. **First-run setup wizard** - create the admin account, point the first library at `/media`.
 
 ### Ollama (`ollama_install`)
 
-Deployed to `{{ docker_stacks_dir }}/ollama`, port 11434, models persisted at `./data` (survives container recreation), GPU via the same CDI syntax. Models to keep pulled are declared in `ollama_models` (`group_vars/gpu.yml`, same declared-list pattern as `technitium_dns_records`/`reverse_proxy_sites`) - the role waits for the API to come up, then `POST /api/pull` (`stream: false`, blocking) for each. Idempotent: Ollama checks blobs by digest against what's already in `./data`, so re-running only downloads what's actually missing, not a full re-fetch.
+Deployed to `{{ docker_stacks_dir }}/ollama`, port 11434, models persisted at `./data` (survives container recreation), GPU via the same CDI syntax. Models to keep pulled are declared in `ollama_models` (`group_vars/gpu.yml`, same declared-list pattern as `technitium_dns_records`/`traefik_install_reverse_proxy_sites`) - the role waits for the API to come up, then `POST /api/pull` (`stream: false`, blocking) for each. Idempotent: Ollama checks blobs by digest against what's already in `./data`, so re-running only downloads what's actually missing, not a full re-fetch.
 
 **No authentication on Ollama's API** - anything that can reach `ollama.<local_domain>` can pull models and run inference. Fine on a trusted LAN; don't put this on the public side of Cloudflare Tunnel (roadmap step 7) without an auth layer in front of it.
 
@@ -392,7 +392,7 @@ One role, two roles-within-the-role depending on group membership (`prod_control
 
 - **Shared prereqs** on every node: swap disabled (`swapoff -a` + stripped from `/etc/fstab`), `overlay`/`br_netfilter` kernel modules loaded and persisted (`/etc/modules-load.d/k3s.conf`), and the sysctls k3s's networking needs (`net.ipv4.ip_forward`, `net.bridge.bridge-nf-call-iptables`/`ip6tables`) via `ansible.posix.sysctl`.
 - **Install**, version-pinned (`k3s_version` in `group_vars/kubernetes.yml`) via the official `get.k3s.io` script, gated by the same "check installed version, only reinstall if it differs" idiom as `node_exporter_install` - `k3s --version`'s output compared against the pinned version rather than a separate marker file. `--disable traefik --disable servicelb` on the server - the existing standalone Traefik LXC stays the one ingress path for this fleet, not k3s's bundled ones.
-- **Join token handoff, in-memory, no separate credential store**: the control-plane play slurps `/var/lib/rancher/k3s/server/node-token` and exposes it as a fact; the workers play (same `ansible-playbook` invocation, control-plane play runs first) reads it via `hostvars[groups['prod_control_plane'][0]]['k3s_node_token']` for `K3S_TOKEN`. `no_log: true` on the agent-install task so the token never lands in output. This only works within a single run - `--limit` on any one node's OpenTofu-triggered convergence always includes the control-plane host (e.g. `gondor:rohan`) so the token fact gets (re-)derived every time, even though installing it is a no-op after the first run.
+- **Join token handoff, in-memory, no separate credential store**: the control-plane play slurps `/var/lib/rancher/k3s/server/node-token` and exposes it as a fact; the workers play (same `ansible-playbook` invocation, control-plane play runs first) reads it via `hostvars[groups['prod_control_plane'][0]]['k3s_install_node_token']` for `K3S_TOKEN`. `no_log: true` on the agent-install task so the token never lands in output. This only works within a single run - `--limit` on any one node's OpenTofu-triggered convergence always includes the control-plane host (e.g. `gondor:rohan`) so the token fact gets (re-)derived every time, even though installing it is a no-op after the first run.
 
 **Kubeconfig**: not automated - pull it yourself once the control-plane is up:
 
@@ -412,7 +412,7 @@ Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/
 ansible-playbook playbooks/argocd_install.yml
 ```
 
-**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `server.service.type=NodePort` (fixed at `30443`), and `reverse_proxy_sites.yml` points Traefik at `https://{{ gondor_host }}:30443` with `insecure_skip_verify` (Argo CD's own self-signed cert on that port - same pattern as `pve.<local_domain>`'s Proxmox backend). NodePort, not the deferred MetalLB/Ingress-controller work - a fixed port on the cluster's own nodes, not a LoadBalancer implementation.
+**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `server.service.type=NodePort` (fixed at `30443`), and `traefik_install_reverse_proxy_sites.yml` points Traefik at `https://{{ gondor_host }}:30443` with `insecure_skip_verify` (Argo CD's own self-signed cert on that port - same pattern as `pve.<local_domain>`'s Proxmox backend). NodePort, not the deferred MetalLB/Ingress-controller work - a fixed port on the cluster's own nodes, not a LoadBalancer implementation.
 
 Login itself stays manual/interactive - the initial admin password:
 
