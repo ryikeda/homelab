@@ -1,5 +1,5 @@
 # HostRegexp on the subdomain prefix, not the literal hostname - same
-# reasoning as homepage/argocd/cronicle: this repo is public, the real
+# reasoning as homepage/argocd: this repo is public, the real
 # domain isn't committed anywhere. The external Traefik LXC preserves
 # the original Host header by default, so this still routes correctly
 # without ever needing to know the real domain.

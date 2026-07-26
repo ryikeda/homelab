@@ -1,12 +1,12 @@
 # openwebui
 
-[Open WebUI](https://github.com/open-webui/open-webui) chat UI, deployed as a Helm chart via `../apps/openwebui.yaml`. `ClusterIP` Service, routed to by the in-cluster Traefik ingress controller (`templates/ingressroute.yaml`) via `HostRegexp` on the `openwebui.` subdomain prefix - reachable at `openwebui.<local_domain>` through the existing Traefik LXC (`reverse_proxy_sites.yml`), same pattern as `homepage`/`argocd`/`cronicle`.
+[Open WebUI](https://github.com/open-webui/open-webui) chat UI, deployed as a Helm chart via `../apps/openwebui.yaml`. `ClusterIP` Service, routed to by the in-cluster Traefik ingress controller (`templates/ingressroute.yaml`) via `HostRegexp` on the `openwebui.` subdomain prefix - reachable at `openwebui.<local_domain>` through the existing Traefik LXC (`reverse_proxy_sites.yml`), same pattern as `homepage`/`argocd`.
 
 Migrated from the old `roles/open_webui_install` Docker Compose deployment on `gpu_host` - a deliberate fresh start, not a data migration (old chat history/accounts stayed behind on `gpu_host` and are not carried over). Ollama itself stays on `gpu_host` (GPU passthrough ties it there, outside this cluster) - this chart calls it over the LAN instead of localhost.
 
 ## The config Secret
 
-Same pattern as `homepage/README.md`'s domain secret and `cronicle/README.md`'s S3 secret: this repo is public, so Ollama's real address, the Postgres connection string, and SeaweedFS credentials never live in a committed file. `templates/deployment.yaml` reads them all from one Secret named `openwebui-config` (`.Values.configSecretName`) via `envFrom` instead.
+Same pattern as `homepage/README.md`'s domain secret: this repo is public, so Ollama's real address, the Postgres connection string, and SeaweedFS credentials never live in a committed file. `templates/deployment.yaml` reads them all from one Secret named `openwebui-config` (`.Values.configSecretName`) via `envFrom` instead.
 
 That Secret is sealed with [Sealed Secrets](https://github.com/bitnami/sealed-secrets) (`../apps/sealed-secrets.yaml` - install that first):
 
