@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ansible-lint:
+    name: Ansible lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/ansible
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync
+
+      - name: Install Ansible collections
+        run: uv run ansible-galaxy collection install -r collections/requirements.yml -p collections
+
+      - run: uv run ansible-lint
+
+      - run: uv run yamllint .
+
+  opentofu-validate:
+    name: OpenTofu fmt & validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/opentofu
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.12.3"
+
+      - run: tofu fmt -check -recursive
+
+      # providers.tf reads ~/.ssh/ansible(.pub) via file() at plan/apply time
+      # for the SSH connection block - `tofu validate` evaluates that
+      # expression too, so a placeholder keypair (never used for a real
+      # connection, this job never touches the actual Proxmox host) keeps
+      # validate from failing on a missing file.
+      - name: Generate placeholder SSH keypair
+        run: ssh-keygen -t ed25519 -N '' -f ~/.ssh/ansible -q
+
+      - run: tofu init -backend=false
+
+      - run: tofu validate
+
+  k8s-lint:
+    name: Kubernetes/Helm lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/k8s
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: helm lint every chart
+        run: |
+          set -euo pipefail
+          for chart in $(find . -name Chart.yaml -exec dirname {} \;); do
+            echo "::group::helm lint $chart"
+            helm lint "$chart"
+            echo "::endgroup::"
+          done
+
+      - run: pip install yamllint
+
+      - run: yamllint -c .yamllint .
