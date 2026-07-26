@@ -15,6 +15,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: homepage
+      annotations:
+        # services.yaml etc. are mounted via subPath, which kubelet does
+        # NOT live-update when the ConfigMap changes (documented k8s
+        # limitation) - this forces a new pod on every config change
+        # instead of silently running stale content.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccountName: homepage
       containers:
