@@ -59,12 +59,12 @@ jobs:
 
       - run: tofu validate
 
-  k8s-lint:
-    name: Kubernetes/Helm lint
+  argocd-lint:
+    name: Argo CD/Helm lint
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: iac/k8s
+        working-directory: iac/argocd
     steps:
       - uses: actions/checkout@v4
 

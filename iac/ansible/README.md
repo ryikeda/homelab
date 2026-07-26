@@ -428,6 +428,6 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.pas
 ansible-playbook playbooks/sealed_secrets_install.yml
 ```
 
-This is how secrets get into `iac/k8s/` despite the repo being public: `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/k8s/homepage/README.md` for a worked example (the `homepage-domain` secret).
+This is how secrets get into `iac/argocd/` despite the repo being public: `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/argocd/homepage/README.md` for a worked example (the `homepage-domain` secret).
 
-GitOps manifests live at `iac/k8s/` (own README there) - first workload deployed is `homepage` (see `iac/k8s/homepage/`). `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.
+GitOps manifests live at `iac/argocd/` (own README there) - first workload deployed is `homepage` (see `iac/argocd/homepage/`). `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.
