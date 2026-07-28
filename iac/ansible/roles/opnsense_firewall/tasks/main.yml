@@ -6,8 +6,8 @@
       ansible.builtin.assert:
         that: opnsense_firewall_rules | length > 0
         fail_msg: >-
-          opnsense_firewall_rules is empty. Define at least one rule (see
-          docs/network.md's firewall isolation rules) before enabling this role.
+          opnsense_firewall_rules is empty. Define at least one rule before
+          enabling this role.
 
     - name: Converge firewall rules
       ansibleguy.opnsense.rule:

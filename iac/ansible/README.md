@@ -300,7 +300,7 @@ Like OPNsense, Technitium needs a one-time manual bootstrap before Ansible can t
 
 ### Registering DNS records
 
-Most hosts now get a static IP (see `docs/network.md`), so their records are declared in `group_vars/all/dns_records.yml` (`technitium_dns_records`, matched by `name` — same list-of-dicts pattern as `traefik_install_reverse_proxy_sites`) and converged with:
+Most hosts now get a static IP, so their records are declared in `group_vars/all/dns_records.yml` (`technitium_dns_records`, matched by `name` — same list-of-dicts pattern as `traefik_install_reverse_proxy_sites`) and converged with:
 
 ```sh
 ansible-playbook playbooks/dns_records.yml
@@ -377,7 +377,7 @@ Deployed to `{{ docker_stacks_dir }}/ollama`, port 11434, models persisted at `.
 
 ## k3s cluster: control-plane + 2 workers
 
-`playbooks/k3s_cluster.yml` converges the k3s prod cluster `iac/opentofu/vm_k3s_prod.tf` provisions (static IPs, `300-302`). No Rancher/hub VM - a single cluster, k3s installed directly. Full design rationale (why no Rancher, why multi-node, where Argo CD runs) is in `docs/k3s-cluster-plan.md`; this section is just the "how it's wired" summary.
+`playbooks/k3s_cluster.yml` converges the k3s prod cluster `iac/opentofu/vm_k3s_prod.tf` provisions (static IPs, `300-302`). No Rancher/hub VM - a single cluster, k3s installed directly.
 
 Tolkien theme, continuing `palantir`'s lead: **`gondor`** is the control-plane, **`rohan`**/**`shire`** are workers - same standalone-name convention as `palantir`/`technitium` (no `k3s-` prefix on the hostnames themselves; the `k3s` inventory group is what ties them together).
 
@@ -402,7 +402,7 @@ ssh ansible@gondor.<local_domain> sudo cat /etc/rancher/k3s/k3s.yaml
 
 Swap `127.0.0.1` in that file for the control-plane's real IP before using it from your own machine.
 
-Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/`maintenance` playbooks all include the `kubernetes` group already. Not yet added to `reboot.yml`/`shutdown.yml` (no drain/cordon logic - see docs/k3s-cluster-plan.md's Explicitly deferred section).
+Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/`maintenance` playbooks all include the `kubernetes` group already. Not yet added to `reboot.yml`/`shutdown.yml` (no drain/cordon logic).
 
 ### MetalLB (`metallb_install`)
 
@@ -434,4 +434,4 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.pas
 
 Moved to GitOps (`iac/argocd/apps/sealed-secrets.yaml`) - no bootstrap dependency like Argo CD has, so there's no reason to keep it Ansible-managed. `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/argocd/homepage/README.md` for a worked example (the `homepage-domain` secret).
 
-GitOps manifests live at `iac/argocd/` (own README there) - first workload deployed is `homepage` (see `iac/argocd/homepage/`). `docs/k3s-cluster-plan.md` has the full Phase 2 rationale.
+GitOps manifests live at `iac/argocd/` (own README there) - first workload deployed is `homepage` (see `iac/argocd/homepage/`).

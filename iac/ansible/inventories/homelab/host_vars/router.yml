@@ -4,7 +4,7 @@ opnsense_dnsmasq_manage: true
 opnsense_unbound_manage: true
 
 opnsense_firewall_rules:
-  # docs/network.md: LAN devices need explicit access to view the NVR.
+  # LAN devices need explicit access to view the NVR.
   # CAMERAS/IOT isolation needs no rules of its own - OPNsense's default
   # deny-all on new interfaces already blocks everything not listed here.
   - description: Allow LAN to CAMERAS (NVR access)

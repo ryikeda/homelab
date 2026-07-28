@@ -5,6 +5,8 @@
 *.local.yaml
 iac/ansible/inventories/homelab/group_vars/all/local.yml
 
+internal_docs/
+
 # Ansible runtime artifacts.
 iac/ansible/.ansible/
 *.retry

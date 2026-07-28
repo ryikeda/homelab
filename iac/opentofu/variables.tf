@@ -11,47 +11,47 @@ variable "proxmox_insecure" {
 }
 
 variable "technitium_ip" {
-  description = "Static IPv4 CIDR address for the Technitium DNS VM (see docs/network.md)."
+  description = "Static IPv4 CIDR address for the Technitium DNS VM."
   type        = string
 }
 
 variable "traefik_ip" {
-  description = "Static IPv4 CIDR address for the Traefik reverse proxy LXC container (see docs/network.md)."
+  description = "Static IPv4 CIDR address for the Traefik reverse proxy LXC container."
   type        = string
 }
 
 variable "gpu_box_ip" {
-  description = "Static IPv4 CIDR address for the GPU workload VM (see docs/network.md)."
+  description = "Static IPv4 CIDR address for the GPU workload VM."
   type        = string
 }
 
 variable "palantir_ip" {
-  description = "Static IPv4 CIDR address for the Palantir monitoring VM (Prometheus + Grafana, see docs/network.md)."
+  description = "Static IPv4 CIDR address for the Palantir monitoring VM (Prometheus + Grafana)."
   type        = string
 }
 
 variable "rivendell_ip" {
-  description = "Static IPv4 CIDR address for the Rivendell storage VM (Postgres/MongoDB/SeaweedFS/CloudBeaver, see docs/network.md)."
+  description = "Static IPv4 CIDR address for the Rivendell storage VM (Postgres/MongoDB/SeaweedFS/CloudBeaver)."
   type        = string
 }
 
 variable "portainer_ip" {
-  description = "Static IPv4 CIDR address for the Portainer LXC container (see docs/network.md)."
+  description = "Static IPv4 CIDR address for the Portainer LXC container."
   type        = string
 }
 
 variable "gondor_ip" {
-  description = "Static IPv4 CIDR address for the k3s control-plane VM (see docs/k3s-cluster-plan.md)."
+  description = "Static IPv4 CIDR address for the k3s control-plane VM."
   type        = string
 }
 
 variable "rohan_ip" {
-  description = "Static IPv4 CIDR address for the k3s worker VM 'rohan' (see docs/k3s-cluster-plan.md)."
+  description = "Static IPv4 CIDR address for the k3s worker VM 'rohan'."
   type        = string
 }
 
 variable "shire_ip" {
-  description = "Static IPv4 CIDR address for the k3s worker VM 'shire' (see docs/k3s-cluster-plan.md)."
+  description = "Static IPv4 CIDR address for the k3s worker VM 'shire'."
   type        = string
 }
 
@@ -61,6 +61,6 @@ variable "lan_gateway" {
 }
 
 variable "local_domain" {
-  description = "Internal-only DNS domain suffix for locally-registered records (see docs/network.md)."
+  description = "Internal-only DNS domain suffix for locally-registered records."
   type        = string
 }

@@ -1,6 +1,6 @@
 # Argo CD manifests
 
-GitOps manifests for the k3s cluster (`gondor`/`rohan`/`shire`), reconciled by Argo CD running in-cluster (`iac/ansible/playbooks/argocd_install.yml`). See `docs/k3s-cluster-plan.md` for the full cluster design.
+GitOps manifests for the k3s cluster (`gondor`/`rohan`/`shire`), reconciled by Argo CD running in-cluster (`iac/ansible/playbooks/argocd_install.yml`).
 
 Argo CD's destination for everything here is `in-cluster` - it's managing the same cluster it runs in, no external kubeconfig/Secret needed. Repo is public, so Argo CD pulls it over plain HTTPS - no deploy key/credentials to manage.
 

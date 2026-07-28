@@ -82,7 +82,7 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
     }
   }
 
-  # Static IP now (see docs/network.md). Wait for SSH, refresh the
+  # Static IP now. Wait for SSH, refresh the
   # known_hosts entry (cloud-init regenerates the host key on every rebuild,
   # same as vm_technitium.tf), then converge this VM to a fully running
   # state in one shot: baseline access, DNS registration, and the

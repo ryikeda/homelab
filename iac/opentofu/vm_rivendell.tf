@@ -2,10 +2,10 @@
 # box holding the DB/bucket data other services depend on shouldn't
 # itself depend on DHCP working at boot.
 #
-# Deliberately its own VM, not in the k3s cluster - see
-# docs/k3s-cluster-plan.md Phase 3/database_services_install role. Tagged
-# "storage" (alongside every other VM's "ubuntu-2404" tag) for
-# at-a-glance role identification in the Proxmox UI.
+# Deliberately its own VM, not in the k3s cluster - see the
+# database_services_install role. Tagged "storage" (alongside every other
+# VM's "ubuntu-2404" tag) for at-a-glance role identification in the
+# Proxmox UI.
 
 resource "proxmox_virtual_environment_vm" "rivendell" {
   name      = "rivendell"
