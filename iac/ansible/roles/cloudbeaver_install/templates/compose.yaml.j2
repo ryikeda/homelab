@@ -9,7 +9,7 @@ services:
       - "{{ cloudbeaver_install_port }}:8978"
     environment:
       - CB_SERVER_NAME=rivendell
-      - CB_ADMIN_NAME=admin
+      - CB_ADMIN_NAME={{ cloudbeaver_install_admin_login }}
       - CB_ADMIN_PASSWORD={{ cloudbeaver_install_admin_password }}
     volumes:
       - ./data:/opt/cloudbeaver/workspace

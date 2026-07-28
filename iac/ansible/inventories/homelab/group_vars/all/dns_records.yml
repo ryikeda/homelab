@@ -34,8 +34,6 @@ technitium_dns_records:
     ip: "{{ traefik_host }}"
   - name: "seaweedfs.{{ local_domain }}"
     ip: "{{ traefik_host }}"
-  - name: "cronicle.{{ local_domain }}"
-    ip: "{{ traefik_host }}"
   - name: "gondor.{{ local_domain }}"
     ip: "{{ gondor_host }}"
   - name: "rohan.{{ local_domain }}"
