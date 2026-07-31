@@ -34,7 +34,7 @@ resource "proxmox_virtual_environment_vm" "rivendell" {
     interface    = "scsi0"
     # Postgres/MongoDB/SeaweedFS all live here - generous headroom for
     # SeaweedFS's actual object data specifically. Resize later if needed.
-    size = 100
+    size = 40
   }
 
   agent {
