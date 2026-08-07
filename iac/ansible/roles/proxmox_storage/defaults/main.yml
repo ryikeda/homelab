@@ -2,11 +2,21 @@
 proxmox_storage_manage: false
 
 # Each entry turns one disk/partition into an LVM-backed Proxmox storage pool
-# for VM images and container rootdirs. Example:
+# for VM images and container rootdirs. type defaults to 'lvm' (thick - each
+# VM disk fully reserved at creation) if omitted. 'lvmthin' only reserves
+# space as it's actually written, at the cost of being able to overcommit
+# the pool - real usage needs monitoring, not just declared VM disk sizes.
+# Examples:
 # proxmox_storage_disks:
 #   - device: /dev/sdb1
 #     vg_name: vmdata
 #     storage_id: local-vmdata
+#     content: images,rootdir
+#   - device: /dev/sdc1
+#     vg_name: vmdata2
+#     storage_id: local-vmdata2
+#     type: lvmthin
+#     thinpool_name: vmdata2-thin  # optional, defaults to "<vg_name>-thin"
 #     content: images,rootdir
 proxmox_storage_disks: []
 
