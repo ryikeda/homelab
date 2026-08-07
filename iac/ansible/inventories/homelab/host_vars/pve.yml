@@ -4,6 +4,7 @@ proxmox_storage_disks:
   - device: /dev/sdb1
     vg_name: vmstore
     storage_id: local-vmstore
+    type: lvmthin
     content: images,rootdir
 
 proxmox_storage_content:
@@ -26,7 +27,7 @@ proxmox_vm_template_templates:
     image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
     storage: local-vmstore
     bridge: vmbr0
-    disk_size: 20G
+    disk_size: 8G
 
 proxmox_lxc_template_templates_manage: true
 proxmox_lxc_template_storage: local
