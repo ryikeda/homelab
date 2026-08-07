@@ -7,6 +7,8 @@ gpu_host: 192.0.2.54
 
 palantir_host: 192.0.2.55
 portainer_host: 192.0.2.56
+# Portainer requires at least 12 characters.
+portainer_install_admin_password: "REPLACE_ME"
 grafana_install_admin_password: "REPLACE_ME"
 
 # Tolkien theme (k3s cluster) - gondor is control-plane, rohan/shire workers.

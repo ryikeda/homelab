@@ -21,3 +21,48 @@
   args:
     chdir: "{{ portainer_install_dir }}"
   when: portainer_install_compose_file.changed
+
+# Portainer CE gates first-run admin creation behind a random token
+# printed to its own startup logs, and self-locks the whole init flow if
+# no admin exists 5 minutes after boot - this runs immediately after the
+# stack starts, well inside that window.
+- name: Check whether the Portainer admin account already exists
+  ansible.builtin.uri:
+    url: "http://{{ portainer_host }}:{{ portainer_install_port }}/api/users/admin/check"
+    method: GET
+    status_code: [204, 404]
+  register: portainer_install_admin_check
+  until: portainer_install_admin_check.status is defined
+  retries: 10
+  delay: 3
+  failed_when: false
+
+- name: Bootstrap the admin account on a fresh install
+  when: (portainer_install_admin_check.status | default(0)) == 404
+  block:
+    - name: Read the Portainer setup token from the container's startup logs
+      ansible.builtin.command: docker compose logs portainer
+      args:
+        chdir: "{{ portainer_install_dir }}"
+      register: portainer_install_logs
+      until: "'setup_token=' in portainer_install_logs.stdout"
+      retries: 10
+      delay: 3
+      changed_when: false
+
+    # Portainer's console logger injects an ANSI color-reset code between
+    # "setup_token=" and the value even when not a TTY, so skip past
+    # whatever's there rather than assuming the hex digits are adjacent.
+    - name: Initialize the admin account
+      vars:
+        portainer_install_setup_token: "{{ portainer_install_logs.stdout | regex_search('setup_token=.*?([0-9a-f]{64})', '\\1') | first }}"
+      ansible.builtin.uri:
+        url: "http://{{ portainer_host }}:{{ portainer_install_port }}/api/users/admin/init"
+        method: POST
+        headers:
+          X-Setup-Token: "{{ portainer_install_setup_token }}"
+        body_format: json
+        body:
+          Username: admin
+          Password: "{{ portainer_install_admin_password }}"
+        status_code: 200

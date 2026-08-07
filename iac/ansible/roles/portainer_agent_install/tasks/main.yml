@@ -21,3 +21,41 @@
   args:
     chdir: "{{ portainer_agent_install_dir }}"
   when: portainer_agent_install_compose_file.changed
+
+# Registers this host as a Docker Standalone Agent environment in
+# Portainer. /api/endpoints returns 409 if the name's already taken,
+# which is exactly the idempotency signal needed here - no separate
+# existence check first. Runs from the controller since it's really
+# managing Portainer's own state, not this host's.
+- name: Log in to Portainer
+  delegate_to: localhost
+  become: false
+  ansible.builtin.uri:
+    url: "http://{{ portainer_host }}:9000/api/auth"
+    method: POST
+    body_format: json
+    body:
+      Username: admin
+      Password: "{{ portainer_install_admin_password }}"
+    status_code: 200
+  register: portainer_agent_install_login
+
+- name: Register this host as a Docker agent environment in Portainer
+  delegate_to: localhost
+  become: false
+  vars:
+    portainer_agent_install_jwt: "{{ portainer_agent_install_login.json.jwt }}"
+  ansible.builtin.uri:
+    url: "http://{{ portainer_host }}:9000/api/endpoints"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ portainer_agent_install_jwt }}"
+    body_format: form-multipart
+    body:
+      Name: "{{ inventory_hostname }}"
+      EndpointCreationType: "2"
+      URL: "tcp://{{ ansible_host }}:{{ portainer_agent_install_port }}"
+      TLS: "true"
+      TLSSkipVerify: "true"
+      TLSSkipClientVerify: "true"
+    status_code: [200, 409]
