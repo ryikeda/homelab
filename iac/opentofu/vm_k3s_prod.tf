@@ -5,6 +5,8 @@ resource "proxmox_virtual_environment_vm" "gondor" {
   vm_id     = 300
   tags      = ["k8s", "ubuntu-2404"]
 
+  depends_on = [proxmox_virtual_environment_vm.technitium]
+
   clone {
     vm_id = 9000
     # local-vmstore is plain LVM, which only supports full clones.

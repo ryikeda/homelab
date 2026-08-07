@@ -15,6 +15,8 @@ resource "proxmox_virtual_environment_vm" "gpu_box" {
   vm_id     = 100
   tags      = ["ubuntu-2404"]
 
+  depends_on = [proxmox_virtual_environment_vm.technitium, proxmox_virtual_environment_container.portainer]
+
   clone {
     vm_id = 9000
     # local-vmstore is plain LVM, which only supports full clones.
