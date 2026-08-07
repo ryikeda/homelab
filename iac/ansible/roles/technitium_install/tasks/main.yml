@@ -19,3 +19,69 @@
     name: dns
     enabled: true
     state: started
+
+# Technitium ships with a default admin/admin login. Logging in with it
+# succeeds only on a never-configured instance, so it doubles as the
+# idempotency check for the bootstrap below - once the password's been
+# changed, this fails and the rest of the block is skipped.
+- name: Wait for the Technitium API and check for default credentials
+  ansible.builtin.uri:
+    url: "http://{{ technitium_host }}:5380/api/user/login?user=admin&pass=admin&includeInfo=true"
+    method: POST
+    status_code: 200
+  register: technitium_install_default_login
+  until: technitium_install_default_login.status is defined
+  retries: 10
+  delay: 3
+  failed_when: false
+
+- name: Bootstrap the admin account and API token on a fresh install
+  when: (technitium_install_default_login.json | default({})).status | default('') == 'ok'
+  block:
+    - name: Change the default admin password
+      vars:
+        technitium_query: "pass=admin&newPass={{ technitium_install_admin_password | urlencode }}"
+      ansible.builtin.uri:
+        url: "http://{{ technitium_host }}:5380/api/user/changePassword?{{ technitium_query }}"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ technitium_install_default_login.json.token }}"
+        status_code: 200
+      register: technitium_install_password_change
+
+    - name: Fail if the password change was rejected
+      ansible.builtin.assert:
+        that: technitium_install_password_change.json.status == 'ok'
+        fail_msg: "{{ technitium_install_password_change.json | to_json }}"
+
+    - name: Create a non-expiring API token for Ansible
+      vars:
+        technitium_query: "user=admin&pass={{ technitium_install_admin_password | urlencode }}&tokenName=ansible"
+      ansible.builtin.uri:
+        url: "http://{{ technitium_host }}:5380/api/user/createToken?{{ technitium_query }}"
+        method: POST
+        status_code: 200
+      register: technitium_install_token_creation
+
+    - name: Fail if token creation was rejected
+      ansible.builtin.assert:
+        that: technitium_install_token_creation.json.status == 'ok'
+        fail_msg: "{{ technitium_install_token_creation.json | to_json }}"
+
+    - name: Ensure the local Technitium credentials directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.technitium"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+
+    # Feeds playbooks/dns_record.yml and playbooks/dns_records.yml, which
+    # both read this same file back via lookup('file', ...).
+    - name: Write the non-expiring API token for Ansible to use
+      ansible.builtin.copy:
+        content: "{{ technitium_install_token_creation.json.token }}"
+        dest: "{{ lookup('env', 'HOME') }}/.technitium/ansible.env"
+        mode: "0600"
+      delegate_to: localhost
+      become: false

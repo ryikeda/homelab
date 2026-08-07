@@ -296,7 +296,7 @@ The `ansibleguy.opnsense` modules need the `httpx` Python package. `router`'s `a
 
 `playbooks/technitium.yml` installs Technitium DNS Server (via its own official install script - no apt repo) on the VM `iac/opentofu/vm_technitium.tf` provisions at a static IP. It runs as its own VM rather than in k3s since DNS is foundational infrastructure that shouldn't depend on the cluster that will eventually depend on it.
 
-Like OPNsense, Technitium needs a one-time manual bootstrap before Ansible can touch it: complete its first-run setup (creates the admin user), then generate an **API token** from its web console and save it to `~/.technitium/ansible.env` (plain text, just the token) — same "credential lives outside the repo" pattern as `~/.opnsense/ansible.env` and `~/.proxmox/opentofu.env`.
+Unlike OPNsense, Technitium's first-run bootstrap is fully automated - `technitium_install`'s tasks log in with its default `admin`/`admin` credentials (this only succeeds on a never-configured instance, which doubles as the idempotency check), change the password to `technitium_install_admin_password`, mint a non-expiring **API token**, and write it to `~/.technitium/ansible.env` (plain text, just the token) — same "credential lives outside the repo" pattern as `~/.opnsense/ansible.env` and `~/.proxmox/opentofu.env`. This means a full `tofu destroy`/`apply` cycle (which rebuilds this VM from scratch) needs no manual intervention.
 
 ### Registering DNS records
 
@@ -316,7 +316,7 @@ Nothing in `iac/opentofu/` currently calls this automatically via a provisioner 
 
 Both playbooks share `tasks/technitium_record.yml`, which calls Technitium's own REST API directly via `ansible.builtin.uri` — no external collection dependency (deliberately: the community options at the time were either a young/rough Terraform provider from a single maintainer, or an Ansible collection judged not worth the dependency for what's a ~30-line task). `/api/zones/records/add` with `overwrite=true` replaces the entire record set for that name/type, making a single API call idempotent by construction — no need to check for an existing record first. Auth is a plain `Authorization: Bearer <token>` header. Technitium always returns HTTP 200; a logical failure (bad token, invalid zone) only shows up in the JSON body's `status` field, which the playbook checks explicitly.
 
-**`vm_technitium.tf` itself deliberately has no self-registration provisioner** — at that VM's own creation time, Technitium isn't installed yet and no API token exists (same bootstrap chicken-and-egg as OPNsense). Its own record has to be registered manually, once, after the token is minted.
+**`vm_technitium.tf` itself deliberately has no self-registration provisioner** — its own provisioner only runs `playbooks/technitium.yml` (install + bootstrap), not `dns_records.yml`. The token now exists automatically once that finishes, but Technitium's own DNS record still needs `ansible-playbook playbooks/dns_records.yml` run once, afterward, to register it.
 
 ## Traefik reverse proxy
 
