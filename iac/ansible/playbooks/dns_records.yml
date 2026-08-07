@@ -31,6 +31,11 @@
         status_code: 200
       register: technitium_zone_records
 
+    - name: Fail if Technitium reported an error fetching the zone
+      ansible.builtin.assert:
+        that: technitium_zone_records.json.status == 'ok'
+        fail_msg: "{{ technitium_zone_records.json | to_json }}"
+
     - name: Determine which A records are no longer declared
       ansible.builtin.set_fact:
         technitium_stale_records: >-
