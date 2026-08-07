@@ -41,6 +41,17 @@ resource "proxmox_virtual_environment_vm" "rivendell" {
     enabled = true
   }
 
+  lifecycle {
+    precondition {
+      condition     = local.vmstore_capacity_ok
+      error_message = local.vmstore_capacity_message
+    }
+    precondition {
+      condition     = local.node_memory_ok
+      error_message = local.node_memory_message
+    }
+  }
+
   initialization {
     dns {
       domain  = var.local_domain
@@ -82,11 +93,6 @@ resource "proxmox_virtual_environment_vm" "rivendell" {
       ansible-playbook playbooks/bootstrap.yml --limit rivendell
       ansible-playbook playbooks/database_services.yml
     EOT
-
-    # Don't force-recreate the VM just because one of these steps hiccuped -
-    # re-run the relevant ansible-playbook command directly to retry instead
-    # (each is idempotent). Same reasoning as vm_gpu_box.tf/vm_technitium.tf.
-    on_failure = continue
   }
 }
 

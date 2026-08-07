@@ -34,6 +34,17 @@ resource "proxmox_virtual_environment_vm" "technitium" {
     enabled = true
   }
 
+  lifecycle {
+    precondition {
+      condition     = local.vmstore_capacity_ok
+      error_message = local.vmstore_capacity_message
+    }
+    precondition {
+      condition     = local.node_memory_ok
+      error_message = local.node_memory_message
+    }
+  }
+
   initialization {
     dns {
       domain  = var.local_domain
@@ -76,10 +87,6 @@ resource "proxmox_virtual_environment_vm" "technitium" {
       ssh-keyscan -H "$ip" >> ~/.ssh/known_hosts 2>/dev/null
       ansible-playbook playbooks/technitium.yml --limit technitium
     EOT
-
-    # Don't force-recreate the VM just because this step hiccuped - re-run
-    # ansible-playbook directly to retry instead.
-    on_failure = continue
   }
 
 }
