@@ -8,6 +8,8 @@ resource "proxmox_virtual_environment_vm" "palantir" {
   vm_id     = 104
   tags      = ["ubuntu-2404"]
 
+  depends_on = [proxmox_virtual_environment_vm.technitium, proxmox_virtual_environment_container.portainer]
+
   clone {
     vm_id = 9000
     # local-vmstore is plain LVM, which only supports full clones.
