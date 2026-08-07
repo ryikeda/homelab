@@ -24,6 +24,17 @@ resource "proxmox_virtual_environment_container" "traefik" {
     size         = 4
   }
 
+  lifecycle {
+    precondition {
+      condition     = local.vmstore_capacity_ok
+      error_message = local.vmstore_capacity_message
+    }
+    precondition {
+      condition     = local.node_memory_ok
+      error_message = local.node_memory_message
+    }
+  }
+
   network_interface {
     name   = "eth0"
     bridge = "vmbr0"
