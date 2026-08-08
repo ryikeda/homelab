@@ -5,6 +5,41 @@
   changed_when: false
   failed_when: false
 
+# qm status only checks the VM's config object exists, not that its disk
+# does - a VG/pool rebuild can destroy the disk while leaving the config
+# object behind.
+- name: "Read the existing template's config: {{ vm_template.name }}"
+  ansible.builtin.command: qm config {{ vm_template.vmid }}
+  register: proxmox_vm_template_config
+  changed_when: false
+  when: proxmox_vm_template_status.rc == 0
+
+- name: "List volumes on the template's storage: {{ vm_template.name }}"
+  ansible.builtin.command: pvesm list {{ vm_template.storage }}
+  register: proxmox_vm_template_storage_list
+  changed_when: false
+  when: proxmox_vm_template_status.rc == 0
+
+- name: "Fail if the template's config survived but its disk didn't: {{ vm_template.name }}"
+  vars:
+    proxmox_vm_template_scsi0_volid: >-
+      {{ proxmox_vm_template_config.stdout
+      | default('') | regex_search('^scsi0:\s*([^,\n]+)', '\1', multiline=True)
+      | first | default('') | trim }}
+  ansible.builtin.fail:
+    msg: >-
+      VM {{ vm_template.vmid }} ({{ vm_template.name }}) exists in Proxmox's
+      config but its boot disk ('{{ proxmox_vm_template_scsi0_volid }}') is
+      missing or absent from storage '{{ vm_template.storage }}' - likely left
+      behind by a storage rebuild. Remove the stale VM object first
+      (qm destroy {{ vm_template.vmid }}) once you're sure it's safe, then
+      re-run this playbook to rebuild the template from scratch.
+  when:
+    - proxmox_vm_template_status.rc == 0
+    - >-
+      proxmox_vm_template_scsi0_volid | length == 0
+      or (proxmox_vm_template_storage_list.stdout_lines | select('match', '^' + proxmox_vm_template_scsi0_volid + '\s') | list | length) == 0
+
 - name: "Build the template: {{ vm_template.name }}"
   when: proxmox_vm_template_status.rc != 0
   block:

@@ -33,6 +33,30 @@
         proxmox_storage_pvs: "{{ proxmox_storage_pv_raw.stdout_lines | map('trim') | list }}"
         proxmox_storage_vgs: "{{ proxmox_storage_vg_raw.stdout_lines | map('trim') | list }}"
 
+    # The register-as-thick/thin tasks below only check "is this storage_id
+    # present at all", which would silently skip re-registering after a
+    # thick->thin rebuild - fail loudly instead.
+    - name: Fail if a declared storage entry is registered with a different type
+      vars:
+        proxmox_storage_matched_line: >-
+          {{ (proxmox_storage_status.stdout_lines | select('match', '^' + item.storage_id + '\s') | list | first) | default('') }}
+        proxmox_storage_existing_type: "{{ (proxmox_storage_matched_line.split() + ['', ''])[1] }}"
+        proxmox_storage_desired_type: "{{ item.type | default('lvm') }}"
+      ansible.builtin.fail:
+        msg: >-
+          Storage '{{ item.storage_id }}' is already registered as type
+          '{{ proxmox_storage_existing_type }}' but this configuration declares it
+          as '{{ proxmox_storage_desired_type }}'. Converting storage type in place
+          isn't supported - remove the old registration first
+          (pvesm remove {{ item.storage_id }}) once you're sure it's safe, then
+          re-run this playbook.
+      loop: "{{ proxmox_storage_disks }}"
+      loop_control:
+        label: "{{ item.storage_id }}"
+      when:
+        - proxmox_storage_existing_type | length > 0
+        - proxmox_storage_existing_type != proxmox_storage_desired_type
+
     - name: Inspect filesystem signature on target disks
       ansible.builtin.command: blkid -o value -s TYPE {{ item.device }}
       register: proxmox_storage_blkid
