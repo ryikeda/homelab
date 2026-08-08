@@ -408,21 +408,27 @@ Node-exporter (fleet-wide metrics) and the usual `bootstrap`/`health`/`updates`/
 
 `playbooks/metallb_install.yml`, run against `prod_control_plane` (`gondor`): `helm_install` first (shared role - version-pinned tarball + version-marker idiom, same as `node_exporter_install`), then `helm upgrade --install`s the `metallb/metallb` chart into `metallb-system`, then applies an `IPAddressPool`/`L2Advertisement` pair (L2/ARP mode - no BGP-speaking router here) built from `metallb_install_ip_range` (`group_vars/all/local.yml`, real LAN addresses, gitignored - never committed).
 
+This is what makes `type: LoadBalancer` Services actually get a real, stable LAN IP on bare metal instead of sitting in `Pending` forever - there's no cloud controller manager to provision one the way GKE/EKS/etc. would.
+
+`gondor`'s own OpenTofu provisioner (`vm_k3s_prod.tf`) runs this automatically, right after `k3s_cluster.yml`, before `argocd_install` - a `tofu destroy`/`apply` cycle needs no manual step here. Idempotent to re-run by hand too:
+
 ```sh
 ansible-playbook playbooks/metallb_install.yml
 ```
-
-This is what makes `type: LoadBalancer` Services actually get a real, stable LAN IP on bare metal instead of sitting in `Pending` forever - there's no cloud controller manager to provision one the way GKE/EKS/etc. would. Install this before `argocd_install` or the GitOps-managed ingress controller (`iac/argocd/apps/ingress-controller.yaml`), since both depend on it.
 
 ### Argo CD (`argocd_install`)
 
 `playbooks/argocd_install.yml`, run against `prod_control_plane` (`gondor`): `helm_install` first, then `helm upgrade --install`s the `argo/argo-cd` chart into the `argocd` namespace, using `gondor`'s own `/etc/rancher/k3s/k3s.yaml` (`k3s_kubeconfig_path`, `group_vars/kubernetes.yml`) as `KUBECONFIG` - no external credential needed since it's managing the cluster it runs in ("in-cluster" destination). Argo CD stays Ansible-installed rather than self-managed via GitOps - it can't deploy itself before it exists, and self-management is a known foot-gun (a bad self-managed change can break the very tool that would fix it); this keeps it as a deliberate, debuggable "break glass" install.
 
+Also automated as part of `gondor`'s provisioner, right after `metallb_install`. Idempotent to re-run by hand too:
+
 ```sh
 ansible-playbook playbooks/argocd_install.yml
 ```
 
-**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `configs.params."server\.insecure"=true` (serves plain HTTP internally - the LXC already terminates real TLS at the edge) and the role applies a static `IngressRoute` (`files/argocd-ingressroute.yaml`) matching `HostRegexp(`^argocd\..+$`)` on the in-cluster Traefik ingress controller (see `iac/argocd/apps/ingress-controller.yaml`). `traefik_install_reverse_proxy_sites.yml` points Traefik at `http://{{ k8s_ingress_lb_ip }}` (the ingress controller's MetalLB-assigned IP) - same upstream homepage uses, disambiguated by `Host` header, not a per-service NodePort/IP anymore.
+The same role also applies `iac/argocd/root.yaml` - the one-time GitOps bootstrap `Application` that watches `apps/` and auto-applies everything under it (Sealed Secrets, the ingress controller, every workload). `kubectl apply` is safe to run every time, so this stays inside the normal role flow rather than a separate manual step.
+
+**Reachable at `argocd.<local_domain>`** through the existing Traefik LXC, same as every other service in this fleet - not port-forward. The Helm install sets `configs.params."server\.insecure"=true` (serves plain HTTP internally - the LXC already terminates real TLS at the edge) and the role applies a static `IngressRoute` (`files/argocd-ingressroute.yaml`) matching `HostRegexp(`^argocd\..+$`)` on the in-cluster Traefik ingress controller (see `iac/argocd/apps/ingress-controller.yaml`). Since that ingress controller is itself deployed via the `root.yaml` GitOps sync applied moments earlier in the same role, this step retries generously (up to 5 minutes) rather than racing it. `traefik_install_reverse_proxy_sites.yml` points Traefik at `http://{{ k8s_ingress_lb_ip }}` (the ingress controller's MetalLB-assigned IP) - same upstream homepage uses, disambiguated by `Host` header, not a per-service NodePort/IP anymore.
 
 Login itself stays manual/interactive - the initial admin password:
 
@@ -433,5 +439,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.pas
 ### Sealed Secrets
 
 Moved to GitOps (`iac/argocd/apps/sealed-secrets.yaml`) - no bootstrap dependency like Argo CD has, so there's no reason to keep it Ansible-managed. `kubeseal` encrypts a value client-side against the controller's public key, the encrypted `SealedSecret` is safe to commit, and only the in-cluster controller (private key never leaves the cluster) can decrypt it back into a real `Secret`. See `iac/argocd/homepage/README.md` for a worked example (the `homepage-domain` secret).
+
+**The controller's signing key survives a cluster rebuild.** Left alone, a fresh install generates a brand-new keypair, which makes every previously-committed `SealedSecret` permanently undecryptable - not something `prune`/`selfHeal` can fix, since the ciphertext itself is now wrong. `argocd_install`'s tasks handle this right after applying `root.yaml`: if `~/.sealed-secrets/master-key.yaml` already exists on the Ansible controller, it's applied to the fresh cluster and the controller is restarted to pick it up (per [Sealed Secrets' own documented recovery procedure](https://github.com/bitnami-labs/sealed-secrets#backup-and-restore) - no need to remove the freshly auto-generated key first, the controller loads every key labeled `active`); otherwise, whatever key the controller just generated is read back and saved to that path for next time. Like `~/.technitium/ansible.env`, this key never goes in the repo (it's public) and never gets generated/read by hand.
 
 GitOps manifests live at `iac/argocd/` (own README there) - first workload deployed is `homepage` (see `iac/argocd/homepage/`).
