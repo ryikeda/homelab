@@ -20,6 +20,118 @@
     KUBECONFIG: "{{ k3s_kubeconfig_path }}"
   changed_when: true
 
+# root.yaml is the one-time GitOps bootstrap - an Application that
+# watches apps/ and auto-applies everything there (Sealed Secrets, the
+# ingress controller, and every workload). kubectl apply is safe to run
+# every time; Argo CD treats a no-op apply as a normal reconcile.
+- name: Copy the Argo CD root Application manifest
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../argocd/root.yaml"
+    dest: /tmp/argocd-root.yaml
+    mode: "0644"
+
+- name: Apply the Argo CD root Application manifest
+  ansible.builtin.command: kubectl apply -f /tmp/argocd-root.yaml
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  changed_when: true
+
+- name: Remove the copied root Application manifest
+  ansible.builtin.file:
+    path: /tmp/argocd-root.yaml
+    state: absent
+
+- name: Wait for the Sealed Secrets controller to exist
+  ansible.builtin.command: kubectl get pods -n kube-system -l app.kubernetes.io/name=sealed-secrets -o name
+  environment:
+    KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+  register: argocd_install_sealed_secrets_pod
+  until: argocd_install_sealed_secrets_pod.stdout != ""
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Check for a local Sealed Secrets key backup
+  ansible.builtin.stat:
+    path: "{{ lookup('env', 'HOME') }}/.sealed-secrets/master-key.yaml"
+  register: argocd_install_key_backup
+  delegate_to: localhost
+  become: false
+
+- name: Restore the backed-up Sealed Secrets key
+  when: argocd_install_key_backup.stat.exists
+  block:
+    - name: Copy the local Sealed Secrets key backup to the control plane
+      ansible.builtin.copy:
+        src: "{{ lookup('env', 'HOME') }}/.sealed-secrets/master-key.yaml"
+        dest: /tmp/sealed-secrets-master-key.yaml
+        mode: "0600"
+
+    # Per Sealed Secrets' own documented recovery procedure: apply the
+    # backup as-is (no need to delete the freshly auto-generated key
+    # first - the controller loads every key labeled "active" into its
+    # store, so both coexist safely) then restart so it's picked up.
+    - name: Apply the backed-up Sealed Secrets key
+      ansible.builtin.command: kubectl apply -f /tmp/sealed-secrets-master-key.yaml
+      environment:
+        KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+      changed_when: true
+
+    - name: Remove the copied key file
+      ansible.builtin.file:
+        path: /tmp/sealed-secrets-master-key.yaml
+        state: absent
+
+    - name: Restart the Sealed Secrets controller to load the restored key
+      ansible.builtin.command: kubectl delete pod -n kube-system -l app.kubernetes.io/name=sealed-secrets
+      environment:
+        KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+      changed_when: true
+
+    - name: Wait for the Sealed Secrets controller to be ready again
+      ansible.builtin.command: >-
+        kubectl wait pod -n kube-system -l app.kubernetes.io/name=sealed-secrets
+        --for=condition=Ready --timeout=120s
+      environment:
+        KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+      changed_when: false
+
+- name: Back up a freshly-generated Sealed Secrets key
+  when: not argocd_install_key_backup.stat.exists
+  block:
+    - name: Wait for the Sealed Secrets controller to be ready
+      ansible.builtin.command: >-
+        kubectl wait pod -n kube-system -l app.kubernetes.io/name=sealed-secrets
+        --for=condition=Ready --timeout=120s
+      environment:
+        KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+      changed_when: false
+
+    - name: Read the freshly-generated Sealed Secrets key
+      ansible.builtin.command: >-
+        kubectl get secret -n kube-system
+        -l sealedsecrets.bitnami.com/sealed-secrets-key=active -o yaml
+      environment:
+        KUBECONFIG: "{{ k3s_kubeconfig_path }}"
+      register: argocd_install_new_key
+      changed_when: false
+
+    - name: Ensure the local Sealed Secrets backup directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.sealed-secrets"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+
+    - name: Save the Sealed Secrets key backup locally
+      ansible.builtin.copy:
+        content: "{{ argocd_install_new_key.stdout }}"
+        dest: "{{ lookup('env', 'HOME') }}/.sealed-secrets/master-key.yaml"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
 - name: Copy the Argo CD IngressRoute manifest
   ansible.builtin.copy:
     src: argocd-ingressroute.yaml
@@ -28,14 +140,16 @@
 
 # The Traefik ingress controller's CRDs need to already be installed
 # (iac/argocd/apps/ingress-controller.yaml) - retry rather than race it.
+# Generous budget: on a cold bootstrap this waits on Argo CD's own sync of
+# the Traefik chart, not just a running pod.
 - name: Apply the Argo CD IngressRoute manifest
   ansible.builtin.command: kubectl apply -f /tmp/argocd-ingressroute.yaml
   environment:
     KUBECONFIG: "{{ k3s_kubeconfig_path }}"
   register: argocd_install_ingressroute_apply
   changed_when: true
-  retries: 5
-  delay: 5
+  retries: 30
+  delay: 10
   until: argocd_install_ingressroute_apply.rc == 0
 
 - name: Remove the copied IngressRoute manifest

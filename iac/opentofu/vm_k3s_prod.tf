@@ -87,6 +87,8 @@ resource "proxmox_virtual_environment_vm" "gondor" {
       ansible-playbook playbooks/bootstrap.yml --limit gondor
       ansible-playbook playbooks/dns_records.yml
       ansible-playbook playbooks/k3s_cluster.yml --limit gondor
+      ansible-playbook playbooks/metallb_install.yml
+      ansible-playbook playbooks/argocd_install.yml
     EOT
   }
 }
